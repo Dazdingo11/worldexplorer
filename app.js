@@ -1,9 +1,11 @@
-//  Netlify site URL:
-const NETLIFY_SITE = "https://<your-site>.netlify.app";
+// Netlify site URL:
+const NETLIFY_SITE = "https://worldexplorer2025.netlify.app";
 
-const PROXY_BASE = (location.hostname.endsWith(".netlify.app") || location.hostname === "localhost" && location.port === "8888")
-  ? "/api/news"
-  : `${NETLIFY_SITE}/api/news`;
+const PROXY_BASE = (
+  location.hostname.endsWith(".netlify.app") ||
+  (location.hostname === "localhost" && location.port === "8888")
+) ? "/api/news" : `${NETLIFY_SITE}/api/news`;
+
 
 /* DOM HOOKS */
 const $ = (sel) => document.querySelector(sel);
@@ -135,6 +137,15 @@ async function fetchNewsForCountry(country) {
     const uB = `${PROXY_BASE}?path=everything&${pB.toString()}`;
     const b = await get(uB);
     if (!b.error && Array.isArray(b.articles) && b.articles.length > 0) return b;
+
+    const pB2 = new URLSearchParams({
+      q: common,
+      sortBy: "publishedAt",
+      pageSize: "10"
+    });
+    const uB2 = `${PROXY_BASE}?path=everything&${pB2.toString()}`;
+    const b2 = await get(uB2);
+    if (!b2.error && Array.isArray(b2.articles) && b2.articles.length > 0) return b2;
   }
 
   if (capital) {
@@ -147,6 +158,15 @@ async function fetchNewsForCountry(country) {
     const uC = `${PROXY_BASE}?path=everything&${pC.toString()}`;
     const c = await get(uC);
     if (!c.error && Array.isArray(c.articles) && c.articles.length > 0) return c;
+
+    const pC2 = new URLSearchParams({
+      q: capital,
+      sortBy: "publishedAt",
+      pageSize: "10"
+    });
+    const uC2 = `${PROXY_BASE}?path=everything&${pC2.toString()}`;
+    const c2 = await get(uC2);
+    if (!c2.error && Array.isArray(c2.articles) && c2.articles.length > 0) return c2;
   }
 
   return { status: "ok", articles: [] };
