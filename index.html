@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>World Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <h1>World Explorer</h1>
+
+    <section id="search">
+      <label for="countryInput" class="sr-only">Country</label>
+      <input id="countryInput" type="text" placeholder="Type a country (e.g., Japan)" />
+      <button id="searchBtn">Search</button>
+      <div id="suggestions" aria-live="polite"></div>
+      <div id="errors" role="alert"></div>
+    </section>
+
+    <section id="country"></section>
+    <section id="news"></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
