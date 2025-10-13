@@ -1,11 +1,5 @@
 // Netlify site URL:
-const NETLIFY_SITE = "https://worldexplorer2025.netlify.app";
-
-const PROXY_BASE = (
-  location.hostname.endsWith(".netlify.app") ||
-  (location.hostname === "localhost" && location.port === "8888")
-) ? "/api/news" : `${NETLIFY_SITE}/api/news`;
-
+const PROXY_BASE = "https://worldexplorer2025.netlify.app/api/news";
 
 /* DOM HOOKS */
 const $ = (sel) => document.querySelector(sel);
