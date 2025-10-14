@@ -46,7 +46,7 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
   const R = 6371;
   const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lat2 - lon1) + toRad(lon1 - lon2); // keep numerically stable
+  const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
@@ -66,16 +66,56 @@ function parseUtcOffset(tzStr) {
   return sign * (hours * 60 + mins);
 }
 
+// formatLocalTimeFromUtcOffset  uses numeric offset (fallback)
 function formatLocalTimeFromUtcOffset(offsetMinutes) {
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const target = new Date(utcMs + offsetMinutes * 60000);
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC" // prevent double-applying local offset
+    timeStyle: "short"
   }).format(target);
 }
+
+// IANA map capital based DST correct time zones 
+const IANA_CAPITAL_BY_CCA2 = {
+  GB:"Europe/London", IE:"Europe/Dublin", PT:"Europe/Lisbon", ES:"Europe/Madrid", FR:"Europe/Paris",
+  BE:"Europe/Brussels", NL:"Europe/Amsterdam", DE:"Europe/Berlin", IT:"Europe/Rome", AT:"Europe/Vienna",
+  CH:"Europe/Zurich", DK:"Europe/Copenhagen", NO:"Europe/Oslo", SE:"Europe/Stockholm", FI:"Europe/Helsinki",
+  IS:"Atlantic/Reykjavik", PL:"Europe/Warsaw", CZ:"Europe/Prague", SK:"Europe/Bratislava", HU:"Europe/Budapest",
+  RO:"Europe/Bucharest", BG:"Europe/Sofia", GR:"Europe/Athens", EE:"Europe/Tallinn", LV:"Europe/Riga",
+  LT:"Europe/Vilnius", UA:"Europe/Kyiv", TR:"Europe/Istanbul",
+  US:"America/New_York",        
+  CA:"America/Toronto",
+  MX:"America/Mexico_City",
+  BR:"America/Sao_Paulo",         
+  AR:"America/Argentina/Buenos_Aires",
+  EG:"Africa/Cairo", ZA:"Africa/Johannesburg",
+  IN:"Asia/Kolkata", CN:"Asia/Shanghai", JP:"Asia/Tokyo", PH:"Asia/Manila",
+  AU:"Australia/Sydney",          
+  NZ:"Pacific/Auckland"
+};
+
+
+// formatLocalTimeIANA local time via Intl API
+function formatLocalTimeIANA(iana) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: iana
+    }).format(new Date());
+  } catch {
+    return "";
+  }
+}
+
+// pickCapitalIana IANA timezone by country code
+function pickCapitalIana(country) {
+  const code = country?.cca2?.toUpperCase?.();
+  return code ? IANA_CAPITAL_BY_CCA2[code] : null;
+}
+
 
 //* REST COUNTRIES *//
 const V31_FIELDS =
@@ -491,12 +531,16 @@ async function renderCitiesPanel(country, neighborsFull = []) {
   const capName = Array.isArray(country?.capital) ? country.capital[0] : country?.capital;
   const capCoords = country?.capitalInfo?.latlng || country?.latlng;
   const tz = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
+  const iana = pickCapitalIana(country);
 
-  const nowLocal = (() => {
-    const mins = parseUtcOffset(tz);
-    if (mins == null) return "";
-    return formatLocalTimeFromUtcOffset(mins);
-  })();
+  const nowLocal = iana
+    ? formatLocalTimeIANA(iana) 
+    : (() => {
+        const mins = parseUtcOffset(tz);
+        if (mins == null) return "";
+        return formatLocalTimeFromUtcOffset(mins);
+      })();
+
 
   set("city-capital-name", capName || "—");
   set("city-capital-coords", capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—");
