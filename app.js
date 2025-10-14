@@ -46,7 +46,7 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
   const R = 6371;
   const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
+  const dLon = toRad(lat2 - lon1) + toRad(lon1 - lon2); // keep numerically stable
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
@@ -57,9 +57,7 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
 function parseUtcOffset(tzStr) {
   if (!tzStr) return null;
   tzStr = String(tzStr).replace("−", "-").trim();
-  if (tzStr === "UTC") return 0; 
-
-  
+  if (tzStr === "UTC") return 0;
   const m = /^UTC([+-])(\d{1,2})(?::(\d{2}))?$/.exec(tzStr);
   if (!m) return null;
   const sign = m[1] === "+" ? 1 : -1;
@@ -74,7 +72,8 @@ function formatLocalTimeFromUtcOffset(offsetMinutes) {
   const target = new Date(utcMs + offsetMinutes * 60000);
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
-    timeStyle: "short"
+    timeStyle: "short",
+    timeZone: "UTC" // prevent double-applying local offset
   }).format(target);
 }
 
@@ -110,7 +109,7 @@ async function tryWithAndWithoutFields(baseUrl, withFields) {
 
 async function loadAllCountries() {
   if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE;
-  
+
   try {
     const r1 = await fetchJsonAny(ALL_COUNTRIES_URL_FIELDS);
     if (r1.ok && Array.isArray(r1.data)) {
@@ -194,12 +193,11 @@ function searchByCapitalLocal(all, query, limit = 5) {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.ref);
 }
 
-//* searchCountries with capital support *//
+//* SEARCH (with capital support) *//
 async function searchCountries(query) {
   const q = encodeURIComponent(query.trim());
 
   try {
-    // exact name
     const exact = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}?fullText=true`,
       true
@@ -208,7 +206,6 @@ async function searchCountries(query) {
   } catch {}
 
   try {
-    // partial name
     const partial = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}`,
       true
@@ -217,7 +214,6 @@ async function searchCountries(query) {
   } catch {}
 
   try {
-    // direct capital search
     const byCapital = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/capital/${q}`,
       true
@@ -226,7 +222,6 @@ async function searchCountries(query) {
   } catch {}
 
   try {
-    // local fuzzy suggestion fallback (capital + name)
     const all = await loadAllCountries();
     const byCapLocal = searchByCapitalLocal(all, query, 5);
     if (byCapLocal.length) return { exact: [], suggestions: byCapLocal };
@@ -258,13 +253,17 @@ const NEWSAPI_SUPPORTED = new Set([
   "tr","tw","ua","us","ve","za"
 ]);
 
+const newsDebug = (...args) => console.log("[NEWS]", ...args);
+
 const get = async (url) => {
+  newsDebug("Request →", url);
   const res = await fetch(url, { method: "GET" });
   let data = null;
   try { data = await res.json(); } catch {}
+  newsDebug("Response ←", res.status, data);
   if (!res.ok || (data && data.status && data.status !== "ok")) {
     const msg = data?.message || `NewsAPI error (${res.status})`;
-    return { error: msg, status: res.status };
+    return { error: msg, status: res.status, raw: data };
   }
   return data;
 };
@@ -277,12 +276,21 @@ function buildEverythingURL(params) {
   return `${PROXY_BASE}?path=everything&${p.toString()}`;
 }
 
+async function newsHealthCheck() {
+  const u = `${PROXY_BASE}?path=top-headlines&country=gb&pageSize=1`;
+  const r = await get(u);
+  if (r.error) {
+    console.warn("News health check failed:", r);
+  } else {
+    console.info("News health check OK");
+  }
+}
+
 async function fetchNewsForCountry(country) {
   const cca2 = (country?.cca2 || "").toLowerCase();
   const common = country?.name?.common || "";
   const capital = Array.isArray(country?.capital) ? country.capital[0] : (country?.capital || "");
 
-  // top headlines by country
   if (NEWSAPI_SUPPORTED.has(cca2)) {
     const p = new URLSearchParams({ country: cca2, pageSize: "10" });
     const u = `${PROXY_BASE}?path=top-headlines&${p.toString()}`;
@@ -474,7 +482,6 @@ async function renderCitiesPanel(country, neighborsFull = []) {
 
   const tpl = document.getElementById("tpl-cities-panel");
   const frag = tpl.content.cloneNode(true);
-  const root = frag.querySelector("#cities-panel");
 
   const set = (key, val) => {
     const el = frag.querySelector(`[data-field="${key}"]`);
@@ -492,21 +499,11 @@ async function renderCitiesPanel(country, neighborsFull = []) {
   })();
 
   set("city-capital-name", capName || "—");
-  set(
-    "city-capital-coords",
-    capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—"
-  );
+  set("city-capital-coords", capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—");
   set("city-capital-localtime", nowLocal || "—");
 
-  // nearby capitals
   const ul = frag.querySelector('[data-field="cities-nearby-list"]');
-  if (
-    ul &&
-    neighborsFull.length &&
-    capCoords &&
-    Number.isFinite(capCoords[0]) &&
-    Number.isFinite(capCoords[1])
-  ) {
+  if (ul && neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
     const nearby = neighborsFull
       .map(n => {
         const nCap = Array.isArray(n?.capital) ? n.capital[0] : n?.capital;
@@ -536,8 +533,17 @@ function renderNews(n) {
 
   const wrapTpl = $("#tpl-news-block");
   const itemTpl = $("#tpl-news-item");
+  if (!wrapTpl || !itemTpl) {
+    console.error("Missing news templates in HTML");
+    return;
+  }
+
   const block = wrapTpl.content.cloneNode(true);
   const list = block.querySelector('[data-field="list"]');
+  if (!list) {
+    console.error("Missing [data-field=list] in news template");
+    return;
+  }
 
   const showMsg = (msg) => {
     const li = document.createElement("li");
@@ -566,14 +572,15 @@ function renderNews(n) {
     const link = row.querySelector('[data-field="url"]');
     const title = row.querySelector('[data-field="title"]');
     const source = row.querySelector('[data-field="source"]');
+    const date   = row.querySelector('[data-field="date"]');
 
-    if (link) link.href = a.url;
+    if (link) link.href = a.url || "#";
     if (title) title.textContent = safeText(a.title);
-    if (source) {
-      const srcName = a.source?.name ? ` (${a.source.name}` : "";
-      const when = a.publishedAt ? ` – ${new Date(a.publishedAt).toLocaleString()}` : "";
-      source.textContent = srcName ? `${srcName}${when})` : when.replace(/^ – /, "");
-    }
+
+    const srcName = a?.source?.name ? a.source.name : "";
+    const when = a?.publishedAt ? new Date(a.publishedAt).toLocaleString() : "";
+    if (source) source.textContent = srcName ? `(${srcName})` : "";
+    if (date)   date.textContent   = when || "";
 
     list.appendChild(row);
   });
@@ -714,5 +721,7 @@ function init() {
     if (e.key === "Enter") handleSearch();
   });
   searchBtn.addEventListener("click", handleSearch);
+
+  newsHealthCheck().catch(() => {});
 }
 init();
