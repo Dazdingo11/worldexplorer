@@ -235,7 +235,21 @@ function searchByCapitalLocal(all, query, limit = 5) {
 
 //* SEARCH (with capital support) *//
 async function searchCountries(query) {
-  const q = encodeURIComponent(query.trim());
+  const qRaw = query.trim();
+  const q = encodeURIComponent(qRaw);
+
+  const code = qRaw.replace(/[^A-Za-z]/g, "").toUpperCase();
+  if (code.length === 2 || code.length === 3) {
+    try {
+      const byCode = await tryWithAndWithoutFields(
+        `https://restcountries.com/v3.1/alpha/${code}`,
+        true
+      );
+      if (Array.isArray(byCode) && byCode.length) {
+        return { exact: byCode, suggestions: [] };
+      }
+    } catch {}
+  }
 
   try {
     const exact = await tryWithAndWithoutFields(
@@ -263,26 +277,13 @@ async function searchCountries(query) {
 
   try {
     const all = await loadAllCountries();
-    const byCapLocal = searchByCapitalLocal(all, query, 5);
+    const byCapLocal = searchByCapitalLocal(all, qRaw, 5);
     if (byCapLocal.length) return { exact: [], suggestions: byCapLocal };
-    const sugg = localFuzzySuggestions(all, query, 5);
+    const sugg = localFuzzySuggestions(all, qRaw, 5);
     if (sugg.length) return { exact: [], suggestions: sugg };
   } catch {}
 
   throw new Error("RESTCountriesSearchFailed");
-}
-
-async function fetchNeighborsByCca3(codes) {
-  if (!Array.isArray(codes) || codes.length === 0) return [];
-  const list = codes.join(",");
-  try {
-    return await tryWithAndWithoutFields(
-      `https://restcountries.com/v3.1/alpha?codes=${list}`,
-      true
-    );
-  } catch (_) {
-    return [];
-  }
 }
 
 //* NEWS *//
