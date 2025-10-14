@@ -1,4 +1,4 @@
-//* Netlify *//
+//* Netlify *// Ainar
 const PROXY_BASE = "https://worldexplorer2025.netlify.app/api/news";
 
 //* DOM HOOKS *//
