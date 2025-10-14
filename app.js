@@ -56,7 +56,8 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
 //* REST COUNTRIES *//
 const V31_FIELDS =
   "name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini";
-const ALL_COUNTRIES_URL = `https://restcountries.com/v3.1/all?fields=${encodeURIComponent(V31_FIELDS)}`;
+const ALL_COUNTRIES_URL_FIELDS = `https://restcountries.com/v3.1/all?fields=${encodeURIComponent(V31_FIELDS)}`;
+const ALL_COUNTRIES_URL_FULL   = `https://restcountries.com/v3.1/all`;
 let ALL_COUNTRIES_CACHE = null;
 
 async function fetchJsonAny(url) {
@@ -84,11 +85,23 @@ async function tryWithAndWithoutFields(baseUrl, withFields) {
 
 async function loadAllCountries() {
   if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE;
-  const r = await fetchJsonAny(ALL_COUNTRIES_URL);
-  if (r.ok && Array.isArray(r.data)) {
-    ALL_COUNTRIES_CACHE = r.data;
+
+  try {
+
+    const r = await fetchJsonAny(ALL_COUNTRIES_URL_FIELDS);
+    if (r.ok && Array.isArray(r.data)) {
+      ALL_COUNTRIES_CACHE = r.data;
+      return ALL_COUNTRIES_CACHE;
+    }
+  } catch {}
+
+ 
+  const r2 = await fetchJsonAny(ALL_COUNTRIES_URL_FULL);
+  if (r2.ok && Array.isArray(r2.data)) {
+    ALL_COUNTRIES_CACHE = r2.data;
     return ALL_COUNTRIES_CACHE;
   }
+
   ALL_COUNTRIES_CACHE = [];
   return ALL_COUNTRIES_CACHE;
 }
@@ -159,9 +172,11 @@ function searchByCapitalLocal(all, query, limit = 5) {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.ref);
 }
 
+
 async function searchCountries(query) {
   const q = encodeURIComponent(query.trim());
 
+  // exact by name
   try {
     const exact = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}?fullText=true`,
@@ -169,6 +184,7 @@ async function searchCountries(query) {
     );
     if (Array.isArray(exact) && exact.length) return { exact, suggestions: [] };
   } catch {}
+
 
   try {
     const partial = await tryWithAndWithoutFields(
@@ -178,10 +194,20 @@ async function searchCountries(query) {
     if (Array.isArray(partial) && partial.length) return { exact: [], suggestions: partial };
   } catch {}
 
+
+  try {
+    const byCapital = await tryWithAndWithoutFields(
+      `https://restcountries.com/v3.1/capital/${q}`,
+      true
+    );
+    if (Array.isArray(byCapital) && byCapital.length) return { exact: [], suggestions: byCapital };
+  } catch {}
+
+
   try {
     const all = await loadAllCountries();
-    const byCapital = searchByCapitalLocal(all, query, 5);
-    if (byCapital.length) return { exact: [], suggestions: byCapital };
+    const byCapLocal = searchByCapitalLocal(all, query, 5);
+    if (byCapLocal.length) return { exact: [], suggestions: byCapLocal };
     const sugg = localFuzzySuggestions(all, query, 5);
     if (sugg.length) return { exact: [], suggestions: sugg };
   } catch {}
@@ -224,6 +250,7 @@ const get = async (url) => {
 function isoDaysAgo(days) {
   return new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
 }
+
 function buildEverythingURL(params) {
   const p = new URLSearchParams(params);
   return `${PROXY_BASE}?path=everything&${p.toString()}`;
@@ -234,12 +261,14 @@ async function fetchNewsForCountry(country) {
   const common = country?.name?.common || "";
   const capital = Array.isArray(country?.capital) ? country.capital[0] : (country?.capital || "");
 
+ 
   if (NEWSAPI_SUPPORTED.has(cca2)) {
     const p = new URLSearchParams({ country: cca2, pageSize: "10" });
     const u = `${PROXY_BASE}?path=top-headlines&${p.toString()}`;
     const a = await get(u);
     if (!a.error && Array.isArray(a.articles) && a.articles.length > 0) return a;
   }
+
 
   const from = isoDaysAgo(7);
   if (common) {
@@ -255,6 +284,7 @@ async function fetchNewsForCountry(country) {
     if (!r1.error && Array.isArray(r1.articles) && r1.articles.length > 0) return r1;
   }
 
+
   if (capital) {
     const u2 = buildEverythingURL({
       q: `"${capital}"`,
@@ -268,6 +298,7 @@ async function fetchNewsForCountry(country) {
     if (!r2.error && Array.isArray(r2.articles) && r2.articles.length > 0) return r2;
   }
 
+  
   if (common || capital) {
     const q = [common, capital].filter(Boolean).map(v => `"${v}"`).join(" OR ");
     if (q) {
@@ -380,8 +411,8 @@ function renderCountry(c) {
   const area = c.area != null ? c.area.toLocaleString() + " km²" : "—";
   const timezones = Array.isArray(c.timezones) ? c.timezones.join(", ") : (c.timezones || "—");
   const tlds = Array.isArray(c.tld) ? c.tld.join(", ") : (c.tld || "—");
-  const calling = c.idd?.root ? `${c.idd.root}${(c.idd.suffixes || []).join(", ")}`
-                               : (c.idd?.suffixes || []).join(", ") || "—";
+  const calling = c.idd?.root ? `${c.idd.root}${(c.idd.suffixes || []).join(", ")}` :
+                    (c.idd?.suffixes || []).join(", ") || "—";
   const languages = c.languages ? Object.values(c.languages).join(", ") : "—";
   const currencies = c.currencies
     ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ""})`).join(", ")
