@@ -53,6 +53,31 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+//* TIME HELPERS *//
+function parseUtcOffset(tzStr) {
+  if (!tzStr) return null;
+  tzStr = String(tzStr).replace("−", "-").trim();
+  if (tzStr === "UTC") return 0; 
+
+  
+  const m = /^UTC([+-])(\d{1,2})(?::(\d{2}))?$/.exec(tzStr);
+  if (!m) return null;
+  const sign = m[1] === "+" ? 1 : -1;
+  const hours = parseInt(m[2] || "0", 10);
+  const mins  = parseInt(m[3] || "0", 10);
+  return sign * (hours * 60 + mins);
+}
+
+function formatLocalTimeFromUtcOffset(offsetMinutes) {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const target = new Date(utcMs + offsetMinutes * 60000);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(target);
+}
+
 //* REST COUNTRIES *//
 const V31_FIELDS =
   "name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini";
@@ -169,7 +194,7 @@ function searchByCapitalLocal(all, query, limit = 5) {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.ref);
 }
 
-//* NEW searchCountries with capital support *//
+//* searchCountries with capital support *//
 async function searchCountries(query) {
   const q = encodeURIComponent(query.trim());
 
@@ -444,70 +469,65 @@ function renderCountry(c) {
 
 //* RENDER: Cities *//
 async function renderCitiesPanel(country, neighborsFull = []) {
-  const panel = document.createElement("section");
-  panel.id = "cities-panel";
-  panel.className = "cities-panel";
+  const old = document.getElementById("cities-panel");
+  if (old) old.remove();
 
-  const title = document.createElement("h3");
-  title.textContent = "Cities";
-  panel.appendChild(title);
+  const tpl = document.getElementById("tpl-cities-panel");
+  const frag = tpl.content.cloneNode(true);
+  const root = frag.querySelector("#cities-panel");
+
+  const set = (key, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.textContent = val ?? "—";
+  };
 
   const capName = Array.isArray(country?.capital) ? country.capital[0] : country?.capital;
   const capCoords = country?.capitalInfo?.latlng || country?.latlng;
   const tz = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
 
-  const capBlock = document.createElement("div");
-  capBlock.className = "cities-capital";
   const nowLocal = (() => {
-    try {
-      if (!tz) return "";
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: tz
-      }).format(new Date());
-    } catch { return ""; }
+    const mins = parseUtcOffset(tz);
+    if (mins == null) return "";
+    return formatLocalTimeFromUtcOffset(mins);
   })();
 
-  capBlock.innerHTML = `
-    <p><strong>Capital:</strong> ${safeText(capName)}</p>
-    <p><strong>Coordinates:</strong> ${capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—"}</p>
-    <p><strong>Local time:</strong> ${nowLocal || "—"}</p>
-  `;
-  panel.appendChild(capBlock);
+  set("city-capital-name", capName || "—");
+  set(
+    "city-capital-coords",
+    capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—"
+  );
+  set("city-capital-localtime", nowLocal || "—");
 
-  if (neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
-    const listWrap = document.createElement("div");
-    listWrap.className = "cities-nearby";
-    const ul = document.createElement("ul");
-    ul.className = "cities-nearby-list";
-
+  // nearby capitals
+  const ul = frag.querySelector('[data-field="cities-nearby-list"]');
+  if (
+    ul &&
+    neighborsFull.length &&
+    capCoords &&
+    Number.isFinite(capCoords[0]) &&
+    Number.isFinite(capCoords[1])
+  ) {
     const nearby = neighborsFull
       .map(n => {
         const nCap = Array.isArray(n?.capital) ? n.capital[0] : n?.capital;
         const nCoords = n?.capitalInfo?.latlng || n?.latlng;
         const d = kmBetween(capCoords, nCoords);
-        return { name: n?.name?.common || n?.name || n?.cca3, cap: nCap, dist: d, coords: nCoords };
+        return { name: n?.name?.common || n?.name || n?.cca3, cap: nCap, dist: d };
       })
       .filter(x => x.cap && Number.isFinite(x.dist))
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 8);
 
     if (nearby.length) {
-      const subtitle = document.createElement("p");
-      subtitle.innerHTML = `<strong>Nearby capitals:</strong>`;
-      listWrap.appendChild(subtitle);
       nearby.forEach(x => {
         const li = document.createElement("li");
         li.textContent = `${x.cap} (${x.name}) – ${Math.round(x.dist)} km`;
         ul.appendChild(li);
       });
-      listWrap.appendChild(ul);
-      panel.appendChild(listWrap);
     }
   }
 
-  countryEl.appendChild(panel);
+  countryEl.appendChild(frag);
 }
 
 //* RENDER: News *//
