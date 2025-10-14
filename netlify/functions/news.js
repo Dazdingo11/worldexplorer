@@ -8,22 +8,20 @@ const corsHeaders = (origin) => ({
   "Vary": "Origin"
 });
 
-
 function withTimeout(ms) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(new Error("Upstream timeout")), ms);
   return { signal: ctrl.signal, clear: () => clearTimeout(t) };
 }
 
+//* Handler *//
 export async function handler(event) {
   const origin = event.headers?.origin || "*";
 
- 
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: corsHeaders(origin), body: "" };
   }
 
- 
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -45,15 +43,12 @@ export async function handler(event) {
     }
     selfUrl.searchParams.delete("path");
 
- 
     for (const [k, v] of [...selfUrl.searchParams.entries()]) {
       if (v === "" || v == null) selfUrl.searchParams.delete(k);
     }
 
-   
     const upstream = `https://newsapi.org/v2/${path}?${selfUrl.searchParams.toString()}`;
 
-   
     const { signal, clear } = withTimeout(7000);
     let r;
     try {
