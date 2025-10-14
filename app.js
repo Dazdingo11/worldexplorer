@@ -1,16 +1,16 @@
-// Netlify site URL:
+//* Netlify *//
 const PROXY_BASE = "https://worldexplorer2025.netlify.app/api/news";
 
-/* DOM HOOKS */
+//* DOM HOOKS *//
 const $ = (sel) => document.querySelector(sel);
-const inputEl = $("#countryInput");
-const searchBtn = $("#searchBtn");
-const suggestionsEl = $("#suggestions");
-const errorsEl = $("#errors");
-const countryEl = $("#country");
-const newsEl = $("#news");
+const inputEl = $("#country-input");
+const searchBtn = $("#search-button");
+const suggestionsEl = $("#suggestions-box");
+const errorsEl = $("#error-box");
+const countryEl = $("#country-panel");
+const newsEl = $("#news-panel");
 
-/* UTIL */
+//* UTIL *//
 const normalize = (s) =>
   (s || "")
     .toLowerCase()
@@ -40,44 +40,135 @@ const levenshtein = (a, b) => {
 
 const safeText = (v) => (v ?? "—");
 
-/* DATA: REST COUNTRIES */
+//* REST COUNTRIES *//
 const V31_FIELDS =
   "name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini";
 
-async function fetchJson(url) {
+const ALL_COUNTRIES_URL = `https://restcountries.com/v3.1/all?fields=${encodeURIComponent(V31_FIELDS)}`;
+
+let ALL_COUNTRIES_CACHE = null;
+
+async function fetchJsonAny(url) {
   const res = await fetch(url);
+  
+  if (res.status === 404) return { ok: false, code: 404, data: null };
   if (!res.ok) throw new Error(String(res.status));
-  return res.json();
+  const data = await res.json();
+  return { ok: true, code: res.status, data };
 }
 
-async function tryWithAndWithoutFields(baseUrl, fields) {
-  if (fields) {
+async function tryWithAndWithoutFields(baseUrl, withFields) {
+ 
+  if (withFields) {
     try {
-      const withFields = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "fields=" + V31_FIELDS;
-      return await fetchJson(withFields);
-    } catch (_) {}
+      const withQuery =
+        baseUrl + (baseUrl.includes("?") ? "&" : "?") + "fields=" + V31_FIELDS;
+      const r = await fetchJsonAny(withQuery);
+      if (r.ok) return r.data;
+      if (r.code === 404) return []; 
+    } catch {}
   }
-  return await fetchJson(baseUrl);
+  const r2 = await fetchJsonAny(baseUrl);
+  if (r2.ok) return r2.data;
+  if (r2.code === 404) return [];
+  throw new Error("RESTCountriesFetchFailed");
+}
+
+async function loadAllCountries() {
+  if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE;
+  const r = await fetchJsonAny(ALL_COUNTRIES_URL);
+  if (r.ok && Array.isArray(r.data)) {
+    ALL_COUNTRIES_CACHE = r.data;
+    return ALL_COUNTRIES_CACHE;
+  }
+ 
+  ALL_COUNTRIES_CACHE = [];
+  return ALL_COUNTRIES_CACHE;
+}
+
+function localFuzzySuggestions(all, query, limit = 5) {
+  const q = normalize(query);
+  if (!q) return [];
+
+  const scoreCountry = (c) => {
+    const common = c?.name?.common || c?.name || "";
+    const official = c?.name?.official || "";
+    const alts = Array.isArray(c?.altSpellings) ? c.altSpellings : [];
+    const keys = [common, official, ...alts].map(normalize).filter(Boolean);
+
+    let bestLev = 0;
+    for (const k of keys) {
+      const d = levenshtein(q, k);
+      const maxLen = Math.max(q.length, k.length) || 1;
+      const s = 1 - d / maxLen;
+      if (s > bestLev) bestLev = s;
+    }
+
+    const commonNorm = normalize(common);
+    const starts = commonNorm.startsWith(q) ? 0.25 : 0;
+    const substr = !starts && commonNorm.includes(q) ? 0.15 : 0;
+
+    let codeBonus = 0;
+    if (q.length <= 3) {
+      if (normalize(c.cca2) === q) codeBonus = 0.4;
+      else if (normalize(c.cca3) === q) codeBonus = 0.35;
+    }
+
+    const raw = bestLev + starts + substr + codeBonus;
+    const finalScore = Math.max(0, Math.min(1, raw));
+    return { display: common || official || c.cca3 || "Unknown", ref: c, score: finalScore };
+  };
+
+  const unique = new Map();
+  for (const c of all) {
+    const s = scoreCountry(c);
+    const key = (c?.name?.common || c?.name || c?.cca3 || "").toLowerCase();
+    const prev = unique.get(key);
+    if (!prev || s.score > prev.score) unique.set(key, s);
+  }
+
+  return Array.from(unique.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.ref);
 }
 
 async function searchCountries(query) {
   const q = encodeURIComponent(query.trim());
+
+
   try {
     const exact = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}?fullText=true`,
       true
     );
-    return { exact, suggestions: [] };
-  } catch (_) {}
+    if (Array.isArray(exact) && exact.length) {
+      return { exact, suggestions: [] };
+    }
+  } catch {}
+
+
   try {
     const partial = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}`,
       true
     );
-    return { exact: [], suggestions: partial };
-  } catch (_) {
-    throw new Error("RESTCountriesSearchFailed");
-  }
+    if (Array.isArray(partial) && partial.length) {
+      return { exact: [], suggestions: partial };
+    }
+  } catch {}
+
+ 
+  try {
+    const all = await loadAllCountries();
+    const sugg = localFuzzySuggestions(all, query, 5);
+    if (sugg.length) {
+      return { exact: [], suggestions: sugg };
+    }
+  } catch {}
+
+
+  throw new Error("RESTCountriesSearchFailed");
 }
 
 async function fetchNeighborsByCca3(codes) {
@@ -93,7 +184,7 @@ async function fetchNeighborsByCca3(codes) {
   }
 }
 
-/* DATA: NEWSAPI  via Netlify proxy*/
+//* NEWS (via Netlify proxy) *//
 const NEWSAPI_SUPPORTED = new Set([
   "ae","ar","at","au","be","bg","br","ca","ch","cn","co","cu","cz","de","eg","fr",
   "gb","gr","hk","hu","id","ie","il","in","it","jp","kr","lt","lv","ma","mx","my",
@@ -101,72 +192,90 @@ const NEWSAPI_SUPPORTED = new Set([
   "tr","tw","ua","us","ve","za"
 ]);
 
+const get = async (url) => {
+  const res = await fetch(url, { method: "GET" });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok || (data && data.status && data.status !== "ok")) {
+    const msg = data?.message || `NewsAPI error (${res.status})`;
+    return { error: msg, status: res.status };
+  }
+  return data;
+};
+
+function isoDaysAgo(days) {
+  return new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+}
+
+function buildEverythingURL(params) {
+  const p = new URLSearchParams(params);
+  return `${PROXY_BASE}?path=everything&${p.toString()}`;
+}
+
 async function fetchNewsForCountry(country) {
   const cca2 = (country?.cca2 || "").toLowerCase();
   const common = country?.name?.common || "";
   const capital = Array.isArray(country?.capital) ? country.capital[0] : (country?.capital || "");
 
-  const get = async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) return { error: `NewsAPI error (${res.status})` };
-    const data = await res.json();
-    if (data.status !== "ok") return { error: data.message || "NewsAPI returned an error." };
-    return data;
-  };
-
+ 
   if (NEWSAPI_SUPPORTED.has(cca2)) {
-    const pA = new URLSearchParams({ country: cca2, pageSize: "10" });
-    const uA = `${PROXY_BASE}?path=top-headlines&${pA.toString()}`;
-    const a = await get(uA);
+    const p = new URLSearchParams({ country: cca2, pageSize: "10" });
+    const u = `${PROXY_BASE}?path=top-headlines&${p.toString()}`;
+    const a = await get(u);
     if (!a.error && Array.isArray(a.articles) && a.articles.length > 0) return a;
   }
 
+ 
+  const from = isoDaysAgo(7);
+
+
   if (common) {
-    const pB = new URLSearchParams({
-      q: common,
+    const u1 = buildEverythingURL({
+      q: `"${common}"`,
+      from,
       sortBy: "publishedAt",
       language: "en",
+      searchIn: "title,description",
       pageSize: "10"
     });
-    const uB = `${PROXY_BASE}?path=everything&${pB.toString()}`;
-    const b = await get(uB);
-    if (!b.error && Array.isArray(b.articles) && b.articles.length > 0) return b;
-
-    const pB2 = new URLSearchParams({
-      q: common,
-      sortBy: "publishedAt",
-      pageSize: "10"
-    });
-    const uB2 = `${PROXY_BASE}?path=everything&${pB2.toString()}`;
-    const b2 = await get(uB2);
-    if (!b2.error && Array.isArray(b2.articles) && b2.articles.length > 0) return b2;
+    const r1 = await get(u1);
+    if (!r1.error && Array.isArray(r1.articles) && r1.articles.length > 0) return r1;
   }
 
+  
   if (capital) {
-    const pC = new URLSearchParams({
-      q: capital,
+    const u2 = buildEverythingURL({
+      q: `"${capital}"`,
+      from,
       sortBy: "publishedAt",
       language: "en",
+      searchIn: "title,description",
       pageSize: "10"
     });
-    const uC = `${PROXY_BASE}?path=everything&${pC.toString()}`;
-    const c = await get(uC);
-    if (!c.error && Array.isArray(c.articles) && c.articles.length > 0) return c;
+    const r2 = await get(u2);
+    if (!r2.error && Array.isArray(r2.articles) && r2.articles.length > 0) return r2;
+  }
 
-    const pC2 = new URLSearchParams({
-      q: capital,
-      sortBy: "publishedAt",
-      pageSize: "10"
-    });
-    const uC2 = `${PROXY_BASE}?path=everything&${pC2.toString()}`;
-    const c2 = await get(uC2);
-    if (!c2.error && Array.isArray(c2.articles) && c2.articles.length > 0) return c2;
+  
+  if (common || capital) {
+    const q = [common, capital].filter(Boolean).map(v => `"${v}"`).join(" OR ");
+    if (q) {
+      const u3 = buildEverythingURL({
+        q,
+        from,
+        sortBy: "publishedAt",
+        searchIn: "title,description",
+        pageSize: "10"
+      });
+      const r3 = await get(u3);
+      if (!r3.error && Array.isArray(r3.articles) && r3.articles.length > 0) return r3;
+    }
   }
 
   return { status: "ok", articles: [] };
 }
 
-/* RENDER */
+//* RENDER: Suggestions *//
 function renderSuggestions(listFromApi, originalQuery) {
   suggestionsEl.innerHTML = "";
   if (!Array.isArray(listFromApi) || listFromApi.length === 0) return;
@@ -217,10 +326,12 @@ function renderSuggestions(listFromApi, originalQuery) {
   if (!picked.length) return;
 
   const box = document.createElement("div");
+  box.className = "suggestions-list";
   box.innerHTML = `<p>Did you mean:</p>`;
   picked.forEach(({ display }) => {
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.className = "suggestion-button";
     btn.textContent = display;
     btn.addEventListener("click", async () => {
       inputEl.value = display;
@@ -232,138 +343,174 @@ function renderSuggestions(listFromApi, originalQuery) {
   suggestionsEl.appendChild(box);
 }
 
+//* RENDER: Country *//
 function renderCountry(c) {
-  if (!c) { countryEl.innerHTML = ""; return; }
+  countryEl.innerHTML = "";
+  if (!c) return;
 
-  const languages = c.languages ? Object.values(c.languages).join(", ") : "—";
-  const currencies = c.currencies
-    ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ""})`).join(", ")
-    : "—";
-  const capital = Array.isArray(c.capital) ? (c.capital[0] || "—") : (c.capital || "—");
+  const tpl = $("#tpl-country-card");
+  const frag = tpl.content.cloneNode(true);
+
+  const setText = (key, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.textContent = safeText(val);
+  };
+  const setAttr = (key, attr, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.setAttribute(attr, val);
+  };
+
+  const name = c.name?.common || c.name;
+  const official = c.name?.official || c.name;
   const flag = c.flags?.svg || c.flags?.png || "";
-
+  const capital = Array.isArray(c.capital) ? (c.capital[0] || "—") : (c.capital || "—");
   const area = c.area != null ? c.area.toLocaleString() + " km²" : "—";
   const timezones = Array.isArray(c.timezones) ? c.timezones.join(", ") : (c.timezones || "—");
   const tlds = Array.isArray(c.tld) ? c.tld.join(", ") : (c.tld || "—");
   const calling = c.idd?.root ? `${c.idd.root}${(c.idd.suffixes || []).join(", ")}`
                                : (c.idd?.suffixes || []).join(", ") || "—";
-  const maps = c.maps?.googleMaps || c.maps?.openStreetMaps || "";
+  const languages = c.languages ? Object.values(c.languages).join(", ") : "—";
+  const currencies = c.currencies
+    ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ""})`).join(", ")
+    : "—";
+  const iso = `${safeText(c.cca2)} / ${safeText(c.cca3)}`;
+  const mapHref = c.maps?.googleMaps || c.maps?.openStreetMaps || "";
+
+  setText("name", name);
+  if (flag) { setAttr("flag", "src", flag); setAttr("flag", "alt", `Flag of ${name}`); }
+  else { const f = frag.querySelector('[data-field="flag"]'); if (f) f.remove(); }
+
+  setText("official", official);
+  setText("region", c.region);
+  setText("subregion", c.subregion);
+  setText("capital", capital);
+  setText("population", c.population?.toLocaleString?.());
+  setText("area", area);
+  setText("languages", languages);
+  setText("currencies", currencies);
+  setText("timezones", timezones);
+  setText("calling", calling);
+  setText("tlds", tlds);
+  setText("iso", iso);
+  if (mapHref) {
+    const a = frag.querySelector('[data-field="mapHref"]');
+    if (a) a.href = mapHref;
+  } else {
+    const m = frag.querySelector(".country-card__map");
+    if (m) m.remove();
+  }
+
+  countryEl.appendChild(frag);
   const borders = Array.isArray(c.borders) ? c.borders : [];
-
-  countryEl.innerHTML = `
-    <article>
-      <h2>${safeText(c.name?.common || c.name)}</h2>
-      ${flag ? `<img src="${flag}" alt="Flag of ${safeText(c.name?.common || c.name)}" style="height:40px">` : ""}
-      <p><strong>Official:</strong> ${safeText(c.name?.official || c.name)}</p>
-      <p><strong>Region:</strong> ${safeText(c.region)} / ${safeText(c.subregion)}</p>
-      <p><strong>Capital:</strong> ${safeText(capital)}</p>
-      <p><strong>Population:</strong> ${c.population?.toLocaleString?.() ?? "—"}</p>
-      <p><strong>Area:</strong> ${area}</p>
-      <p><strong>Languages:</strong> ${languages}</p>
-      <p><strong>Currencies:</strong> ${currencies}</p>
-      <p><strong>Timezones:</strong> ${timezones}</p>
-      <p><strong>Calling Code:</strong> ${calling}</p>
-      <p><strong>Top-level Domains:</strong> ${tlds}</p>
-      <p><strong>ISO:</strong> ${safeText(c.cca2)} / ${safeText(c.cca3)}</p>
-      ${maps ? `<p><a href="${maps}" target="_blank" rel="noopener noreferrer">View on map</a></p>` : ""}
-      <div id="bordersBlock"></div>
-    </article>
-  `;
-
   renderBordersAsync(borders);
 }
 
+//* RENDER: News *//
 function renderNews(n) {
+  newsEl.innerHTML = "";
+
+  const wrapTpl = $("#tpl-news-block");
+  const itemTpl = $("#tpl-news-item");
+  const block = wrapTpl.content.cloneNode(true);
+  const list = block.querySelector('[data-field="list"]');
+
+  const showMsg = (msg) => {
+    const li = document.createElement("li");
+    li.className = "news-item";
+    li.textContent = msg;
+    list.appendChild(li);
+    newsEl.appendChild(block);
+  };
+
   if (!n || n.error) {
-    newsEl.innerHTML = `
-      <article>
-        <h3>Top News</h3>
-        <p>${n?.error ? safeText(n.error) : "No news available."}</p>
-      </article>
-    `;
+    const msg = n?.status === 429
+      ? "Rate limit hit. Try again shortly."
+      : (n?.error || "No news available.");
+    showMsg(msg);
     return;
   }
+
   const items = (n.articles || []).slice(0, 10);
   if (items.length === 0) {
-    newsEl.innerHTML = `
-      <article>
-        <h3>Top News</h3>
-        <p>No articles found.</p>
-      </article>
-    `;
+    showMsg("No articles found.");
     return;
   }
-  newsEl.innerHTML = `
-    <article>
-      <h3>Top News</h3>
-      <ul>
-        ${items.map(a => `
-          <li>
-            <a href="${a.url}" target="_blank" rel="noopener noreferrer">${safeText(a.title)}</a>
-            ${a.source?.name ? ` <small>(${safeText(a.source.name)})</small>` : ""}
-          </li>
-        `).join("")}
-      </ul>
-    </article>
-  `;
+
+  items.forEach(a => {
+    const row = itemTpl.content.cloneNode(true);
+    const link = row.querySelector('[data-field="url"]');
+    const title = row.querySelector('[data-field="title"]');
+    const source = row.querySelector('[data-field="source"]');
+
+    if (link) link.href = a.url;
+    if (title) title.textContent = safeText(a.title);
+    if (source) {
+      const srcName = a.source?.name ? ` (${a.source.name}` : "";
+      const when = a.publishedAt ? ` – ${new Date(a.publishedAt).toLocaleString()}` : "";
+      source.textContent = srcName ? `${srcName}${when})` : when.replace(/^ – /, "");
+    }
+
+    list.appendChild(row);
+  });
+
+  newsEl.appendChild(block);
 }
 
-/* NEIGHBOR RENDERING */
+//* NEIGHBORS RENDER *//
 async function renderBordersAsync(borders) {
-  const mount = $("#bordersBlock");
+  const mount = document.querySelector('[data-field="bordersMount"]');
   if (!mount) return;
   if (!Array.isArray(borders) || borders.length === 0) {
-    mount.innerHTML = `<p><strong>Borders:</strong> —</p>`;
+    mount.textContent = "—";
     return;
   }
 
-  mount.innerHTML = `<p><strong>Borders:</strong> loading…</p>`;
+  mount.textContent = "loading…";
   try {
     const neighbors = await fetchNeighborsByCca3(borders);
     if (!Array.isArray(neighbors) || neighbors.length === 0) {
-      mount.innerHTML = `<p><strong>Borders:</strong> —</p>`;
+      mount.textContent = "—";
       return;
     }
-    const buttons = neighbors
-      .map(n => {
-        const name = n?.name?.common || n?.name || n?.cca3 || "Unknown";
-        const code = n?.cca3 || "";
-        return `<button type="button" class="neighbor-btn" data-cca3="${code}">${name}</button>`;
-      })
-      .join(" ");
+    mount.textContent = "";
+    const btnTpl = $("#tpl-border-button");
 
-    mount.innerHTML = `
-      <div>
-        <p><strong>Borders:</strong></p>
-        <div>${buttons}</div>
-      </div>
-    `;
-
-    mount.querySelectorAll(".neighbor-btn").forEach(btn => {
-      btn.addEventListener("click", async (e) => {
-        const code = e.currentTarget.getAttribute("data-cca3");
-        if (!code) return;
+    neighbors.forEach(n => {
+      const btnFrag = btnTpl.content.cloneNode(true);
+      const btn = btnFrag.querySelector(".neighbor-button");
+      const name = n?.name?.common || n?.name || n?.cca3 || "Unknown";
+      const code = n?.cca3 || "";
+      btn.textContent = name;
+      btn.dataset.cca3 = code;
+      btn.addEventListener("click", async () => {
         await handleNeighborClick(code);
       });
+      mount.appendChild(btnFrag);
     });
   } catch (e) {
-    mount.innerHTML = `<p><strong>Borders:</strong> —</p>`;
     console.error(e);
+    mount.textContent = "—";
   }
 }
 
-/* CONTROLLER */
+//* CONTROLLER *//
+const countryCache = new Map();
+
 async function showCountry(country, updateInput = true) {
   if (updateInput) {
     const n = country?.name?.common || country?.name || "";
     if (n) inputEl.value = n;
   }
-
   renderCountry(country);
-
   try {
-    const news = await fetchNewsForCountry(country);
-    renderNews(news);
+    const key = country?.cca3 || country?.cca2 || country?.name?.common || "";
+    if (key && countryCache.has(key)) {
+      renderNews(countryCache.get(key));
+    } else {
+      const news = await fetchNewsForCountry(country);
+      if (key) countryCache.set(key, news);
+      renderNews(news);
+    }
   } catch (e) {
     console.error(e);
     renderNews({ error: "Failed to load news." });
@@ -373,7 +520,6 @@ async function showCountry(country, updateInput = true) {
 async function handleNeighborClick(cca3) {
   const prevErr = errorsEl.textContent;
   errorsEl.textContent = "Loading neighbor…";
-
   try {
     const list = await fetchNeighborsByCca3([cca3]);
     if (Array.isArray(list) && list.length) {
@@ -392,7 +538,12 @@ async function handleNeighborClick(cca3) {
   }
 }
 
+
+let searchBusy = false;
 async function handleSearch() {
+  if (searchBusy) return;
+  searchBusy = true;
+
   errorsEl.textContent = "";
   suggestionsEl.innerHTML = "";
   countryEl.innerHTML = "";
@@ -401,39 +552,35 @@ async function handleSearch() {
   const query = inputEl.value.trim();
   if (!query) {
     errorsEl.textContent = "Please type a country name.";
+    searchBusy = false;
     return;
   }
-
-  let country = null;
 
   try {
     const { exact, suggestions } = await searchCountries(query);
 
     if (Array.isArray(exact) && exact.length) {
-      country = exact[0];
+      await showCountry(exact[0], false);
     } else if (Array.isArray(suggestions) && suggestions.length) {
       renderSuggestions(suggestions, query);
       errorsEl.textContent = "No exact match. Try a suggestion.";
-      return;
     } else {
       errorsEl.textContent = "No matching country found.";
-      return;
     }
   } catch (e) {
-    errorsEl.textContent = "Country lookup failed. Try again.";
     console.error(e);
-    return;
+   
+    errorsEl.textContent = "Country lookup failed. Try again.";
+  } finally {
+    searchBusy = false;
   }
-
-  await showCountry(country, false);
 }
 
-/* INIT */
+// --- INIT ---
 function init() {
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleSearch();
   });
   searchBtn.addEventListener("click", handleSearch);
 }
-
 init();
