@@ -40,6 +40,19 @@ const levenshtein = (a, b) => {
 
 const safeText = (v) => (v ?? "—");
 
+// Haversine (km)
+function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return Infinity;
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 //* REST COUNTRIES *//
 const V31_FIELDS =
   "name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini";
@@ -50,7 +63,7 @@ let ALL_COUNTRIES_CACHE = null;
 
 async function fetchJsonAny(url) {
   const res = await fetch(url);
-  
+
   if (res.status === 404) return { ok: false, code: 404, data: null };
   if (!res.ok) throw new Error(String(res.status));
   const data = await res.json();
@@ -58,14 +71,13 @@ async function fetchJsonAny(url) {
 }
 
 async function tryWithAndWithoutFields(baseUrl, withFields) {
- 
   if (withFields) {
     try {
       const withQuery =
         baseUrl + (baseUrl.includes("?") ? "&" : "?") + "fields=" + V31_FIELDS;
       const r = await fetchJsonAny(withQuery);
       if (r.ok) return r.data;
-      if (r.code === 404) return []; 
+      if (r.code === 404) return [];
     } catch {}
   }
   const r2 = await fetchJsonAny(baseUrl);
@@ -81,7 +93,6 @@ async function loadAllCountries() {
     ALL_COUNTRIES_CACHE = r.data;
     return ALL_COUNTRIES_CACHE;
   }
- 
   ALL_COUNTRIES_CACHE = [];
   return ALL_COUNTRIES_CACHE;
 }
@@ -147,7 +158,7 @@ async function searchCountries(query) {
     }
   } catch {}
 
-
+ 
   try {
     const partial = await tryWithAndWithoutFields(
       `https://restcountries.com/v3.1/name/${q}`,
@@ -162,11 +173,8 @@ async function searchCountries(query) {
   try {
     const all = await loadAllCountries();
     const sugg = localFuzzySuggestions(all, query, 5);
-    if (sugg.length) {
-      return { exact: [], suggestions: sugg };
-    }
+    if (sugg.length) return { exact: [], suggestions: sugg };
   } catch {}
-
 
   throw new Error("RESTCountriesSearchFailed");
 }
@@ -225,10 +233,8 @@ async function fetchNewsForCountry(country) {
     if (!a.error && Array.isArray(a.articles) && a.articles.length > 0) return a;
   }
 
- 
+
   const from = isoDaysAgo(7);
-
-
   if (common) {
     const u1 = buildEverythingURL({
       q: `"${common}"`,
@@ -242,7 +248,7 @@ async function fetchNewsForCountry(country) {
     if (!r1.error && Array.isArray(r1.articles) && r1.articles.length > 0) return r1;
   }
 
-  
+
   if (capital) {
     const u2 = buildEverythingURL({
       q: `"${capital}"`,
@@ -346,6 +352,9 @@ function renderSuggestions(listFromApi, originalQuery) {
 //* RENDER: Country *//
 function renderCountry(c) {
   countryEl.innerHTML = "";
+ 
+  const oldCities = document.getElementById("cities-panel");
+  if (oldCities) oldCities.remove();
   if (!c) return;
 
   const tpl = $("#tpl-country-card");
@@ -401,8 +410,80 @@ function renderCountry(c) {
   }
 
   countryEl.appendChild(frag);
+
+  // render borders async 
   const borders = Array.isArray(c.borders) ? c.borders : [];
-  renderBordersAsync(borders);
+  renderBordersAsync(borders, c).catch(console.error);
+}
+
+//* RENDER: Cities  *//
+async function renderCitiesPanel(country, neighborsFull = []) {
+  const panel = document.createElement("section");
+  panel.id = "cities-panel";
+  panel.className = "cities-panel";
+
+  const title = document.createElement("h3");
+  title.textContent = "Cities";
+  panel.appendChild(title);
+
+  // Capital info
+  const capName = Array.isArray(country?.capital) ? country.capital[0] : country?.capital;
+  const capCoords = country?.capitalInfo?.latlng || country?.latlng;
+  const tz = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
+
+  const capBlock = document.createElement("div");
+  capBlock.className = "cities-capital";
+  const nowLocal = (() => {
+    try {
+      if (!tz) return "";
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: tz
+      }).format(new Date());
+    } catch { return ""; }
+  })();
+
+  capBlock.innerHTML = `
+    <p><strong>Capital:</strong> ${safeText(capName)}</p>
+    <p><strong>Coordinates:</strong> ${capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—"}</p>
+    <p><strong>Local time:</strong> ${nowLocal || "—"}</p>
+  `;
+  panel.appendChild(capBlock);
+
+  if (neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
+    const listWrap = document.createElement("div");
+    listWrap.className = "cities-nearby";
+    const ul = document.createElement("ul");
+    ul.className = "cities-nearby-list";
+
+    const nearby = neighborsFull
+      .map(n => {
+        const nCap = Array.isArray(n?.capital) ? n.capital[0] : n?.capital;
+        const nCoords = n?.capitalInfo?.latlng || n?.latlng;
+        const d = kmBetween(capCoords, nCoords);
+        return { name: n?.name?.common || n?.name || nCap || n?.cca3, cap: nCap, dist: d, coords: nCoords };
+      })
+      .filter(x => x.cap && Number.isFinite(x.dist))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 8);
+
+    if (nearby.length) {
+      const subtitle = document.createElement("p");
+      subtitle.innerHTML = `<strong>Nearby capitals:</strong>`;
+      listWrap.appendChild(subtitle);
+      nearby.forEach(x => {
+        const li = document.createElement("li");
+        li.textContent = `${x.cap} (${x.name}) – ${Math.round(x.dist)} km`;
+        ul.appendChild(li);
+      });
+      listWrap.appendChild(ul);
+      panel.appendChild(listWrap);
+    }
+  }
+
+ 
+  countryEl.appendChild(panel);
 }
 
 //* RENDER: News *//
@@ -457,11 +538,13 @@ function renderNews(n) {
 }
 
 //* NEIGHBORS RENDER *//
-async function renderBordersAsync(borders) {
+async function renderBordersAsync(borders, currentCountry = null) {
   const mount = document.querySelector('[data-field="bordersMount"]');
   if (!mount) return;
   if (!Array.isArray(borders) || borders.length === 0) {
     mount.textContent = "—";
+
+    if (currentCountry) await renderCitiesPanel(currentCountry, []);
     return;
   }
 
@@ -470,6 +553,7 @@ async function renderBordersAsync(borders) {
     const neighbors = await fetchNeighborsByCca3(borders);
     if (!Array.isArray(neighbors) || neighbors.length === 0) {
       mount.textContent = "—";
+      if (currentCountry) await renderCitiesPanel(currentCountry, []);
       return;
     }
     mount.textContent = "";
@@ -487,9 +571,13 @@ async function renderBordersAsync(borders) {
       });
       mount.appendChild(btnFrag);
     });
+
+
+    if (currentCountry) await renderCitiesPanel(currentCountry, neighbors);
   } catch (e) {
     console.error(e);
     mount.textContent = "—";
+    if (currentCountry) await renderCitiesPanel(currentCountry, []);
   }
 }
 
@@ -538,7 +626,7 @@ async function handleNeighborClick(cca3) {
   }
 }
 
-
+//* SEARCH FLOW *//
 let searchBusy = false;
 async function handleSearch() {
   if (searchBusy) return;
@@ -548,6 +636,9 @@ async function handleSearch() {
   suggestionsEl.innerHTML = "";
   countryEl.innerHTML = "";
   newsEl.innerHTML = "";
+
+  const oldCities = document.getElementById("cities-panel");
+  if (oldCities) oldCities.remove();
 
   const query = inputEl.value.trim();
   if (!query) {
@@ -569,14 +660,13 @@ async function handleSearch() {
     }
   } catch (e) {
     console.error(e);
-   
     errorsEl.textContent = "Country lookup failed. Try again.";
   } finally {
     searchBusy = false;
   }
 }
 
-// --- INIT ---
+//* INIT *//
 function init() {
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleSearch();

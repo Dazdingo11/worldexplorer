@@ -23,7 +23,6 @@
     <section id="news-panel" class="news-panel"></section>
   </main>
 
-
   <!-- Country card -->
   <template id="tpl-country-card">
     <article class="country-card">
@@ -44,7 +43,9 @@
         <div><dt>Calling Code</dt><dd data-field="calling"></dd></div>
         <div><dt>TLDs</dt><dd data-field="tlds"></dd></div>
         <div><dt>ISO</dt><dd data-field="iso"></dd></div>
-        <div class="country-card__map"><a target="_blank" rel="noopener noreferrer" data-field="mapHref">View on map</a></div>
+        <div class="country-card__map">
+          <a target="_blank" rel="noopener noreferrer" data-field="mapHref">View on map</a>
+        </div>
       </dl>
 
       <div class="country-card__borders">
@@ -74,7 +75,27 @@
         <span data-field="title"></span>
       </a>
       <small class="news-item__source" data-field="source"></small>
+   
+      <small class="news-item__date" data-field="date"></small>
     </li>
+  </template>
+
+  <!-- Cities panel -->
+  <template id="tpl-cities-panel">
+    <section class="cities-panel" id="cities-panel">
+      <h3>Cities</h3>
+
+      <div class="cities-capital">
+        <p><strong>Capital:</strong> <span data-field="city-capital-name"></span></p>
+        <p><strong>Coordinates:</strong> <span data-field="city-capital-coords"></span></p>
+        <p><strong>Local time:</strong> <span data-field="city-capital-localtime"></span></p>
+      </div>
+
+      <div class="cities-nearby">
+        <p><strong>Nearby capitals:</strong></p>
+        <ul class="cities-nearby-list" data-field="cities-nearby-list"></ul>
+      </div>
+    </section>
   </template>
 
   <script type="module" src="app.js"></script>
