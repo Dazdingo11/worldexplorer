@@ -464,6 +464,7 @@ function renderCountry(c) {
 	}
 
 	countryEl.appendChild(frag)
+
 	const borders = Array.isArray(c.borders) ? c.borders : []
 	renderBordersAsync(borders, c).catch(console.error)
 }
@@ -695,10 +696,20 @@ const resizeBanner = () => {
 	banner.style.backgroundPosition = 'bottom'
 }
 
+//* Add Clases to section*//
+const insertClasses = () => {
+	const countryPanelWrapper = document.querySelector('.country-panel-wrapper')
+	const newsPanelWrapper = document.querySelector('.news-panel-wrapper')
+	countryPanelWrapper.classList.add(...['py-5'])
+	newsPanelWrapper.classList.add(...['py-5'])
+}
+
 //* SEARCH FLOW *//
 let searchBusy = false
 async function handleSearch() {
 	resizeBanner()
+	renderFooter()
+	insertClasses()
 	if (searchBusy) return
 	searchBusy = true
 
@@ -736,11 +747,21 @@ async function handleSearch() {
 	}
 }
 
+//* Footer *//
+const renderFooter = () => {
+	const footer = document.querySelector('footer')
+	footer.classList.add(...['bg-dark', 'text-light', 'py-3'])
+	const footerTpl = document.getElementById('footer-tpl')
+	const frag = footerTpl.content.cloneNode(true)
+	footer.append(frag)
+}
+
 //* INIT *//
 function init() {
 	inputEl.addEventListener('keydown', e => {
 		if (e.key === 'Enter') handleSearch()
 	})
+
 	searchBtn.addEventListener('click', handleSearch)
 }
 init()

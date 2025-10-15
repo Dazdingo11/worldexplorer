@@ -25,6 +25,7 @@
 .banner-content {
 	position: relative;
 	top: 200px;
+	height: fit-content;
 }
 .search-input {
 	outline: none;
