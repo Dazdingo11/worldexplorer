@@ -1,24 +1,24 @@
 .banner {
-  background-image: url("./../images/pexels-maximilian-ruther-199439233-11546831.jpg");
-  background-size: cover;
-  /* background-position: -2px -148px; */
-  /* background-position: center; */
-  /* centers image */
-  background-repeat: no-repeat;
-  width: 100vw; /* full viewport width */
-  height: 100vh;
+	background-image: url('./../images/pexels-maximilian-ruther-199439233-11546831.webp');
+	background-size: cover;
+	background-repeat: no-repeat;
+	width: 100vw;
+	height: 100vh;
+	transition: height 1s ease;
 }
 
 .landing-headings {
-  font-family: Alegreya Serif, serif;
+	font-family: Alegreya Serif, serif;
 }
 
 .landing-heading1 {
-  font-size: 7vw;
-  color: black;
+	font-size: max(30px, 7vw);
+	color: black;
+	transition: all 1s ease;
 }
 
 .landing-heading2 {
-  font-size: 3vw;
-  color: black;
+	font-size: max(16px, 3vw);
+	color: black;
+	transition: all 1s ease;
 }
