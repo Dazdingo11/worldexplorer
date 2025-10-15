@@ -1,8 +1,7 @@
 .banner {
-	background-image: url('./../images/pexels-maximilian-ruther-199439233-11546831.webp');
+	background-image: radial-gradient(#00000099, #00000099), url('./../images/pexels-maximilian-ruther-199439233-11546831.webp');
 	background-size: cover;
 	background-repeat: no-repeat;
-	width: 100vw;
 	height: 100vh;
 	transition: height 1s ease;
 }
@@ -12,13 +11,21 @@
 }
 
 .landing-heading1 {
-	font-size: max(30px, 7vw);
-	color: black;
+	font-size: calc(1rem + 5vw);
+	font-weight: 900;
+	color: #fff;
 	transition: all 1s ease;
 }
 
 .landing-heading2 {
-	font-size: max(16px, 3vw);
-	color: black;
+	font-size: calc(1rem + 2.5vw);
+	color: #fff;
 	transition: all 1s ease;
+}
+.banner-content {
+	position: relative;
+	top: 200px;
+}
+.search-input {
+	outline: none;
 }

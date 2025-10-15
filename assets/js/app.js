@@ -684,10 +684,13 @@ const resizeBanner = () => {
 	const banner = document.querySelector('.banner')
 	const appTitle = document.querySelector('.app-title')
 	const appSubTitle = document.querySelector('.app-subtitle')
-	appTitle.style.fontSize = '2vw'
-	appSubTitle.style.fontSize = '1vw'
-	appTitle.style.color = '#ffffff'
-	appSubTitle.style.color = '#ffffff'
+	const searchSection = document.querySelector('#search-section')
+	const bannerContent = document.querySelector('#banner-content')
+
+	appTitle.style.fontSize = 'calc(1rem + 3vw)'
+	appSubTitle.style.fontSize = 'calc(1rem + 1vw)'
+	searchSection.style.alignItems = 'center'
+	bannerContent.classList.remove('banner-content')
 	banner.style.height = '30vh'
 	banner.style.backgroundPosition = 'bottom'
 }
