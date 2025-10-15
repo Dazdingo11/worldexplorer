@@ -39,7 +39,7 @@
 					id="country-input"
 					class="search-input"
 					type="text"
-					value="japan"
+					value="brazil"
 					placeholder="Type a country (e.g., Japan)"
 				/>
 				<button
@@ -60,7 +60,7 @@
 					role="alert"
 				></div>
 			</section>
-			<section class="country-panel-wrapper bg-secondary">
+			<section class="country-panel-wrapper bg-light py-5">
 				<div class="container">
 					<section
 						id="country-panel"
@@ -68,99 +68,85 @@
 					></section>
 				</div>
 			</section>
-			<section
-				id="news-panel"
-				class="news-panel"
-			></section>
+			<section class="news-panel-wrapper bg-gradient py-5">
+				<div class="container">
+					<section
+						id="news-panel"
+						class="news-panel"
+					></section>
+				</div>
+			</section>
 		</main>
 
 		<!-- Country card -->
 		<template id="tpl-country-card">
-			<article class="country-card py-5">
-				<div class="row">
-					<div class="col-12 col-md-8">
+			<section class="country-card">
+				<div class="row border-1 border-bottom pb-5">
+					<div class="col-12 col-lg-7 mb-5 mb-lg-0">
 						<header class="country-card__header">
-							<h2
-								class="country-card__title"
-								data-field="name"
-							></h2>
 							<img
-								class="country-card__flag img-fluid"
+								class="country-card__flag img-fluid border border-1 rounded-2"
 								data-field="flag"
 								alt=""
 							/>
 						</header>
 					</div>
-					<div class="col-12 col-md-4">
-						<aside>
-							<dl class="country-card__grid">
-								<div class="d-flex flex-nowrap gap-5">
-									<dt>Official Lang <i class="bi bi-chat-right-fill"></i></dt>
-									<dd data-field="official"></dd>
-								</div>
-								<div class="d-flex flex-nowrap gap-5">
-									<dt>Region <i class="bi bi-pin-map-fill"></i></dt>
-									<dd>
-										<span data-field="region"></span> /
-										<span data-field="subregion"></span>
-									</dd>
-								</div>
-								<div class="d-flex flex-nowrap gap-5">
-									<dt>Capital <i class="bi bi-geo-alt-fill"></i></dt>
-									<dd data-field="capital"></dd>
-								</div>
-								<div class="d-flex flex-nowrap gap-5">
-									<dt>Population <i class="bi bi-people-fill"></i></dt>
-									<dd data-field="population"></dd>
-								</div>
-								<div>
-									<dt>Area</dt>
-									<dd data-field="area"></dd>
-								</div>
-								<div>
-									<dt>Languages</dt>
-									<dd data-field="languages"></dd>
-								</div>
-								<div>
-									<dt>Currencies</dt>
-									<dd data-field="currencies"></dd>
-								</div>
-								<div>
-									<dt>Timezones</dt>
-									<dd data-field="timezones"></dd>
-								</div>
-								<div>
-									<dt>Calling Code</dt>
-									<dd data-field="calling"></dd>
-								</div>
-								<div>
-									<dt>TLDs</dt>
-									<dd data-field="tlds"></dd>
-								</div>
-								<div>
-									<dt>ISO</dt>
-									<dd data-field="iso"></dd>
-								</div>
-								<div class="country-card__map">
-									<a
-										target="_blank"
-										rel="noopener noreferrer"
-										data-field="mapHref"
-										>View on map</a
-									>
-								</div>
-							</dl>
-						</aside>
+					<div class="col-12 col-lg-5">
+						<ul class="country-card__grid fs-5 list-group">
+							<li class="list-group-item"><i class="bi bi-chat-right-fill"></i> Official Lang: <span data-field="official"></span></li>
+							<li class="list-group-item">
+								<i class="bi bi-pin-map-fill"></i> Region: <span data-field="region"></span> / <span data-field="subregion"></span>
+							</li>
+							<li class="list-group-item"><i class="bi bi-geo-alt-fill"></i> Capital: <span data-field="capital"></span></li>
+							<li class="list-group-item"><i class="bi bi-people-fill"></i> Population: <span data-field="population"></span></li>
+							<li class="list-group-item"><i class="bi bi-radar"></i> Area: <span data-field="area"></span></li>
+							<li class="list-group-item"><i class="bi bi-chat-fill"></i> Languages: <span data-field="languages"></span></li>
+							<li class="list-group-item"><i class="bi bi-currency-exchange"></i> Currencies: <span data-field="currencies"></span></li>
+							<li class="list-group-item"><i class="bi bi-clock"></i> Timezones: <span data-field="timezones"></span></li>
+							<li class="list-group-item"><i class="bi bi-phone-fill"></i> Calling Code:<span data-field="calling"></span></li>
+							<li class="list-group-item"><i class="bi bi-ethernet"></i> TLDs:<span data-field="tlds"></span></li>
+							<li class="list-group-item"><i class="bi bi-asterisk"></i> ISO:<span data-field="iso"></span></li>
+						</ul>
 					</div>
 				</div>
-				<div class="country-card__borders">
-					<p><strong>Borders:</strong></p>
-					<div
-						class="borders-list"
-						data-field="bordersMount"
-					></div>
+			</section>
+
+			<section>
+				<div class="row mt-5">
+					<div class="col-12 col-md-6">
+						<h2
+							class="country-card__title fs-1 tracking-wide"
+							data-field="name"
+						></h2>
+						<div class="country-card__map">
+							<a
+								target="_blank"
+								rel="noopener noreferrer"
+								data-field="mapHref"
+								class="text-decoration-none fs-3"
+								><i class="bi bi-map-fill"></i> View on map</a
+							>
+						</div>
+						<div
+							id="cities-panel-list"
+							class="mt-5"
+						></div>
+					</div>
+					<div class="col-12 col-md-6">
+						<div class="country-card__borders">
+							<h3 class="mb-3">Bordering Countries:</h3>
+							<div
+								class="borders-list"
+								data-field="bordersMount"
+							></div>
+						</div>
+						<div
+							id="nearby-list"
+							class="mt-5"
+						></div>
+					</div>
 				</div>
-			</article>
+			</section>
 		</template>
 
 		<!-- Border button -->
@@ -204,39 +190,6 @@
 					data-field="date"
 				></small>
 			</li>
-		</template>
-
-		<!-- Cities panel -->
-		<template id="tpl-cities-panel">
-			<section
-				class="cities-panel"
-				id="cities-panel"
-			>
-				<h3>Cities</h3>
-
-				<div class="cities-capital">
-					<p>
-						<strong>Capital:</strong>
-						<span data-field="city-capital-name"></span>
-					</p>
-					<p>
-						<strong>Coordinates:</strong>
-						<span data-field="city-capital-coords"></span>
-					</p>
-					<p>
-						<strong>Local time:</strong>
-						<span data-field="city-capital-localtime"></span>
-					</p>
-				</div>
-
-				<div class="cities-nearby">
-					<p><strong>Nearby capitals:</strong></p>
-					<ul
-						class="cities-nearby-list"
-						data-field="cities-nearby-list"
-					></ul>
-				</div>
-			</section>
 		</template>
 
 		<script
