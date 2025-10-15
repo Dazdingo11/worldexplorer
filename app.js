@@ -10,9 +10,6 @@ const errorsEl = $("#error-box");
 const countryEl = $("#country-panel");
 const newsEl = $("#news-panel");
 
-
-const citiesPanelListEl = $("#cities-panel-list"); 
-const nearbyListMountEl = $("#nearby-list");       
 //* UTIL *//
 const normalize = (s) =>
   (s || "")
@@ -56,7 +53,7 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-//* TIME HELPERS  *//
+//* TIME HELPERS *//
 function parseUtcOffset(tzStr) {
   if (!tzStr) return null;
   tzStr = String(tzStr).replace("−", "-").trim();
@@ -69,7 +66,7 @@ function parseUtcOffset(tzStr) {
   return sign * (hours * 60 + mins);
 }
 
-
+// formatLocalTimeFromUtcOffset  uses numeric offset (fallback)
 function formatLocalTimeFromUtcOffset(offsetMinutes) {
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -80,7 +77,7 @@ function formatLocalTimeFromUtcOffset(offsetMinutes) {
   }).format(target);
 }
 
-//* IANA map *//
+// IANA map capital based DST correct time zones 
 const IANA_CAPITAL_BY_CCA2 = {
   GB:"Europe/London", IE:"Europe/Dublin", PT:"Europe/Lisbon", ES:"Europe/Madrid", FR:"Europe/Paris",
   BE:"Europe/Brussels", NL:"Europe/Amsterdam", DE:"Europe/Berlin", IT:"Europe/Rome", AT:"Europe/Vienna",
@@ -88,8 +85,8 @@ const IANA_CAPITAL_BY_CCA2 = {
   IS:"Atlantic/Reykjavik", PL:"Europe/Warsaw", CZ:"Europe/Prague", SK:"Europe/Bratislava", HU:"Europe/Budapest",
   RO:"Europe/Bucharest", BG:"Europe/Sofia", GR:"Europe/Athens", EE:"Europe/Tallinn", LV:"Europe/Riga",
   LT:"Europe/Vilnius", UA:"Europe/Kyiv", TR:"Europe/Istanbul",
-  US:"America/New_York",   
-  CA:"America/Toronto",    
+  US:"America/New_York",        
+  CA:"America/Toronto",
   MX:"America/Mexico_City",
   BR:"America/Sao_Paulo",         
   AR:"America/Argentina/Buenos_Aires",
@@ -99,6 +96,8 @@ const IANA_CAPITAL_BY_CCA2 = {
   NZ:"Pacific/Auckland"
 };
 
+
+// formatLocalTimeIANA local time via Intl API
 function formatLocalTimeIANA(iana) {
   try {
     return new Intl.DateTimeFormat(undefined, {
@@ -111,10 +110,12 @@ function formatLocalTimeIANA(iana) {
   }
 }
 
+// pickCapitalIana IANA timezone by country code
 function pickCapitalIana(country) {
   const code = country?.cca2?.toUpperCase?.();
   return code ? IANA_CAPITAL_BY_CCA2[code] : null;
 }
+
 
 //* REST COUNTRIES *//
 const V31_FIELDS =
@@ -148,6 +149,7 @@ async function tryWithAndWithoutFields(baseUrl, withFields) {
 
 async function loadAllCountries() {
   if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE;
+
   try {
     const r1 = await fetchJsonAny(ALL_COUNTRIES_URL_FIELDS);
     if (r1.ok && Array.isArray(r1.data)) {
@@ -155,6 +157,7 @@ async function loadAllCountries() {
       return ALL_COUNTRIES_CACHE;
     }
   } catch {}
+
   const r2 = await fetchJsonAny(ALL_COUNTRIES_URL_FULL);
   if (r2.ok && Array.isArray(r2.data)) {
     ALL_COUNTRIES_CACHE = r2.data;
@@ -230,12 +233,11 @@ function searchByCapitalLocal(all, query, limit = 5) {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.ref);
 }
 
-//* SEARCH with alpha code and capital support *//
+//* SEARCH (with capital support) *//
 async function searchCountries(query) {
   const qRaw = query.trim();
   const q = encodeURIComponent(qRaw);
 
-  //* try 2/3-letter ISO code first *//
   const code = qRaw.replace(/[^A-Za-z]/g, "").toUpperCase();
   if (code.length === 2 || code.length === 3) {
     try {
@@ -284,19 +286,6 @@ async function searchCountries(query) {
   throw new Error("RESTCountriesSearchFailed");
 }
 
-async function fetchNeighborsByCca3(codes) {
-  if (!Array.isArray(codes) || codes.length === 0) return [];
-  const list = codes.join(",");
-  try {
-    return await tryWithAndWithoutFields(
-      `https://restcountries.com/v3.1/alpha?codes=${list}`,
-      true
-    );
-  } catch (_) {
-    return [];
-  }
-}
-
 //* NEWS *//
 const NEWSAPI_SUPPORTED = new Set([
   "ae","ar","at","au","be","bg","br","ca","ch","cn","co","cu","cz","de","eg","fr",
@@ -305,20 +294,19 @@ const NEWSAPI_SUPPORTED = new Set([
   "tr","tw","ua","us","ve","za"
 ]);
 
+const newsDebug = (...args) => console.log("[NEWS]", ...args);
+
 const get = async (url) => {
-  try {
-    const res = await fetch(url, { method: "GET" });
-    let data = null;
-    try { data = await res.json(); } catch {}
-    if (!res.ok || (data && data.status && data.status !== "ok")) {
-      const msg = data?.message || `NewsAPI error (${res.status})`;
-      return { error: msg, status: res.status };
-    }
-    return data;
-  } catch (e) {
- 
-    return { error: "News service unavailable (CORS or network).", status: 0 };
+  newsDebug("Request →", url);
+  const res = await fetch(url, { method: "GET" });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  newsDebug("Response ←", res.status, data);
+  if (!res.ok || (data && data.status && data.status !== "ok")) {
+    const msg = data?.message || `NewsAPI error (${res.status})`;
+    return { error: msg, status: res.status, raw: data };
   }
+  return data;
 };
 
 function isoDaysAgo(days) {
@@ -329,12 +317,21 @@ function buildEverythingURL(params) {
   return `${PROXY_BASE}?path=everything&${p.toString()}`;
 }
 
+async function newsHealthCheck() {
+  const u = `${PROXY_BASE}?path=top-headlines&country=gb&pageSize=1`;
+  const r = await get(u);
+  if (r.error) {
+    console.warn("News health check failed:", r);
+  } else {
+    console.info("News health check OK");
+  }
+}
+
 async function fetchNewsForCountry(country) {
   const cca2 = (country?.cca2 || "").toLowerCase();
   const common = country?.name?.common || "";
   const capital = Array.isArray(country?.capital) ? country.capital[0] : (country?.capital || "");
 
-  
   if (NEWSAPI_SUPPORTED.has(cca2)) {
     const p = new URLSearchParams({ country: cca2, pageSize: "10" });
     const u = `${PROXY_BASE}?path=top-headlines&${p.toString()}`;
@@ -521,53 +518,37 @@ function renderCountry(c) {
 
 //* RENDER: Cities *//
 async function renderCitiesPanel(country, neighborsFull = []) {
-
   const old = document.getElementById("cities-panel");
   if (old) old.remove();
 
- 
-  const panel = document.createElement("section");
-  panel.className = "cities-panel";
-  panel.id = "cities-panel";
+  const tpl = document.getElementById("tpl-cities-panel");
+  const frag = tpl.content.cloneNode(true);
 
-  const h3 = document.createElement("h3");
-  h3.textContent = "Cities";
-  panel.appendChild(h3);
+  const set = (key, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.textContent = val ?? "—";
+  };
 
   const capName = Array.isArray(country?.capital) ? country.capital[0] : country?.capital;
   const capCoords = country?.capitalInfo?.latlng || country?.latlng;
-  const tzRaw = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
+  const tz = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
   const iana = pickCapitalIana(country);
 
   const nowLocal = iana
-    ? formatLocalTimeIANA(iana)
+    ? formatLocalTimeIANA(iana) 
     : (() => {
-        const mins = parseUtcOffset(tzRaw);
+        const mins = parseUtcOffset(tz);
         if (mins == null) return "";
         return formatLocalTimeFromUtcOffset(mins);
       })();
 
-  const capBlock = document.createElement("div");
-  capBlock.className = "cities-capital";
-  capBlock.innerHTML = `
-    <p><strong>Capital:</strong> ${safeText(capName)}</p>
-    <p><strong>Coordinates:</strong> ${capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—"}</p>
-    <p><strong>Local time:</strong> ${nowLocal || "—"}</p>
-  `;
-  panel.appendChild(capBlock);
 
-  //* Nearby capitals *//
-  if (neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
-    const listWrap = document.createElement("div");
-    listWrap.className = "cities-nearby";
+  set("city-capital-name", capName || "—");
+  set("city-capital-coords", capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—");
+  set("city-capital-localtime", nowLocal || "—");
 
-    const subtitle = document.createElement("p");
-    subtitle.innerHTML = `<strong>Nearby capitals:</strong>`;
-    listWrap.appendChild(subtitle);
-
-    const ul = document.createElement("ul");
-    ul.className = "cities-nearby-list";
-
+  const ul = frag.querySelector('[data-field="cities-nearby-list"]');
+  if (ul && neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
     const nearby = neighborsFull
       .map(n => {
         const nCap = Array.isArray(n?.capital) ? n.capital[0] : n?.capital;
@@ -585,26 +566,10 @@ async function renderCitiesPanel(country, neighborsFull = []) {
         li.textContent = `${x.cap} (${x.name}) – ${Math.round(x.dist)} km`;
         ul.appendChild(li);
       });
-      listWrap.appendChild(ul);
-
-    
-      if (nearbyListMountEl) {
-       
-        nearbyListMountEl.innerHTML = "";
-        nearbyListMountEl.appendChild(listWrap);
-      } else {
-        panel.appendChild(listWrap);
-      }
     }
   }
 
- 
-  if (citiesPanelListEl) {
-    citiesPanelListEl.innerHTML = "";
-    citiesPanelListEl.appendChild(panel);
-  } else {
-    countryEl.appendChild(panel);
-  }
+  countryEl.appendChild(frag);
 }
 
 //* RENDER: News *//
@@ -614,19 +579,14 @@ function renderNews(n) {
   const wrapTpl = $("#tpl-news-block");
   const itemTpl = $("#tpl-news-item");
   if (!wrapTpl || !itemTpl) {
-   
-    const fallback = document.createElement("div");
-    fallback.textContent = (!n || n.error) ? (n?.error || "No news available.") : "News loaded.";
-    newsEl.appendChild(fallback);
+    console.error("Missing news templates in HTML");
     return;
   }
 
   const block = wrapTpl.content.cloneNode(true);
   const list = block.querySelector('[data-field="list"]');
   if (!list) {
-    const fallback = document.createElement("div");
-    fallback.textContent = "No news available.";
-    newsEl.appendChild(fallback);
+    console.error("Missing [data-field=list] in news template");
     return;
   }
 
@@ -699,7 +659,6 @@ async function renderBordersAsync(borders, currentCountry = null) {
       const btn = btnFrag.querySelector(".neighbor-button");
       const name = n?.name?.common || n?.name || n?.cca3 || "Unknown";
       const code = n?.cca3 || "";
-      btn.classList.add("btn", "btn-outline-secondary"); 
       btn.textContent = name;
       btn.dataset.cca3 = code;
       btn.addEventListener("click", async () => {
@@ -718,22 +677,13 @@ async function renderBordersAsync(borders, currentCountry = null) {
 
 //* CONTROLLER *//
 const countryCache = new Map();
-let didResizeBanner = false;
 
 async function showCountry(country, updateInput = true) {
   if (updateInput) {
     const n = country?.name?.common || country?.name || "";
     if (n) inputEl.value = n;
   }
-
   renderCountry(country);
-
-  // Only resize banner after we successfully render a country 
-  if (!didResizeBanner) {
-    resizeBanner();
-    didResizeBanner = true;
-  }
-
   try {
     const key = country?.cca3 || country?.cca2 || country?.name?.common || "";
     if (key && countryCache.has(key)) {
@@ -770,21 +720,6 @@ async function handleNeighborClick(cca3) {
   }
 }
 
-//* BANNER RESIZE AFTER FIRST SUCCESSFUL SEARCH *//
-function resizeBanner() {
-  const banner = document.querySelector(".banner");
-  const appTitle = document.querySelector(".app-title");
-  const appSubTitle = document.querySelector(".app-subtitle");
-  if (!banner || !appTitle || !appSubTitle) return; // guard if elements not present
-
-  appTitle.style.fontSize = "2vw";
-  appSubTitle.style.fontSize = "1vw";
-  appTitle.style.color = "#ffffff";
-  appSubTitle.style.color = "#ffffff";
-  banner.style.height = "30vh";
-  banner.style.backgroundPosition = "bottom";
-}
-
 //* SEARCH FLOW *//
 let searchBusy = false;
 async function handleSearch() {
@@ -798,10 +733,6 @@ async function handleSearch() {
 
   const oldCities = document.getElementById("cities-panel");
   if (oldCities) oldCities.remove();
-
-  //* banner mounts *//
-  if (citiesPanelListEl) citiesPanelListEl.innerHTML = "";
-  if (nearbyListMountEl) nearbyListMountEl.innerHTML = "";
 
   const query = inputEl.value.trim();
   if (!query) {
@@ -835,5 +766,7 @@ function init() {
     if (e.key === "Enter") handleSearch();
   });
   searchBtn.addEventListener("click", handleSearch);
+
+  newsHealthCheck().catch(() => {});
 }
 init();
