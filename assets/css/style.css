@@ -1,0 +1,24 @@
+.banner {
+  background-image: url("./../images/pexels-maximilian-ruther-199439233-11546831.jpg");
+  background-size: cover;
+  /* background-position: -2px -148px; */
+  /* background-position: center; */
+  /* centers image */
+  background-repeat: no-repeat;
+  width: 100vw; /* full viewport width */
+  height: 100vh;
+}
+
+.landing-headings {
+  font-family: Alegreya Serif, serif;
+}
+
+.landing-heading1 {
+  font-size: 7vw;
+  color: black;
+}
+
+.landing-heading2 {
+  font-size: 3vw;
+  color: black;
+}
