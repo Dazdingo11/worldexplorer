@@ -9,6 +9,15 @@ body {
 	margin-right: 8px;
 	margin-top: 8px;
 }
-section {
+/* section {
 	margin-top: 16px;
+} */
+
+.borders-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+.borders-list button {
+	width: fit-content;
 }
