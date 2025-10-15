@@ -1,4 +1,23 @@
-body { font-family: system-ui, sans-serif; margin: 16px; }
-#errors { color: #c00; margin-top: 8px; }
-#suggestions button { margin-right: 8px; margin-top: 8px; }
-section { margin-top: 16px; }
+body {
+	font-family: system-ui, sans-serif;
+}
+#errors {
+	color: #c00;
+	margin-top: 8px;
+}
+#suggestions button {
+	margin-right: 8px;
+	margin-top: 8px;
+}
+/* section {
+	margin-top: 16px;
+} */
+
+.borders-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+.borders-list button {
+	width: fit-content;
+}
