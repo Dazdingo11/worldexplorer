@@ -48,11 +48,76 @@ function kmBetween([lat1, lon1] = [], [lat2, lon2] = []) {
 	return 2 * R * Math.asin(Math.sqrt(a))
 }
 
+//* TIME HELPERS *//
+function parseUtcOffset(tzStr) {
+  if (!tzStr) return null;
+  tzStr = String(tzStr).replace("−", "-").trim();
+  if (tzStr === "UTC") return 0;
+  const m = /^UTC([+-])(\d{1,2})(?::(\d{2}))?$/.exec(tzStr);
+  if (!m) return null;
+  const sign = m[1] === "+" ? 1 : -1;
+  const hours = parseInt(m[2] || "0", 10);
+  const mins  = parseInt(m[3] || "0", 10);
+  return sign * (hours * 60 + mins);
+}
+
+// formatLocalTimeFromUtcOffset  uses numeric offset (fallback)
+function formatLocalTimeFromUtcOffset(offsetMinutes) {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const target = new Date(utcMs + offsetMinutes * 60000);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(target);
+}
+
+// IANA map capital based DST correct time zones 
+const IANA_CAPITAL_BY_CCA2 = {
+  GB:"Europe/London", IE:"Europe/Dublin", PT:"Europe/Lisbon", ES:"Europe/Madrid", FR:"Europe/Paris",
+  BE:"Europe/Brussels", NL:"Europe/Amsterdam", DE:"Europe/Berlin", IT:"Europe/Rome", AT:"Europe/Vienna",
+  CH:"Europe/Zurich", DK:"Europe/Copenhagen", NO:"Europe/Oslo", SE:"Europe/Stockholm", FI:"Europe/Helsinki",
+  IS:"Atlantic/Reykjavik", PL:"Europe/Warsaw", CZ:"Europe/Prague", SK:"Europe/Bratislava", HU:"Europe/Budapest",
+  RO:"Europe/Bucharest", BG:"Europe/Sofia", GR:"Europe/Athens", EE:"Europe/Tallinn", LV:"Europe/Riga",
+  LT:"Europe/Vilnius", UA:"Europe/Kyiv", TR:"Europe/Istanbul",
+  US:"America/New_York",        
+  CA:"America/Toronto",
+  MX:"America/Mexico_City",
+  BR:"America/Sao_Paulo",         
+  AR:"America/Argentina/Buenos_Aires",
+  EG:"Africa/Cairo", ZA:"Africa/Johannesburg",
+  IN:"Asia/Kolkata", CN:"Asia/Shanghai", JP:"Asia/Tokyo", PH:"Asia/Manila",
+  AU:"Australia/Sydney",          
+  NZ:"Pacific/Auckland"
+};
+
+
+// formatLocalTimeIANA local time via Intl API
+function formatLocalTimeIANA(iana) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: iana
+    }).format(new Date());
+  } catch {
+    return "";
+  }
+}
+
+// pickCapitalIana IANA timezone by country code
+function pickCapitalIana(country) {
+  const code = country?.cca2?.toUpperCase?.();
+  return code ? IANA_CAPITAL_BY_CCA2[code] : null;
+}
+
+
 //* REST COUNTRIES *//
 const V31_FIELDS =
-	'name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini'
-const ALL_COUNTRIES_URL = `https://restcountries.com/v3.1/all?fields=${encodeURIComponent(V31_FIELDS)}`
-let ALL_COUNTRIES_CACHE = null
+  "name,cca2,cca3,altSpellings,capital,region,subregion,flags,population,languages,currencies,latlng,area,timezones,borders,idd,capitalInfo,maps,tld,continents,fifa,cioc,coatOfArms,demonyms,gini";
+const ALL_COUNTRIES_URL_FIELDS = `https://restcountries.com/v3.1/all?fields=${encodeURIComponent(V31_FIELDS)}`;
+const ALL_COUNTRIES_URL_FULL   = `https://restcountries.com/v3.1/all`;
+let ALL_COUNTRIES_CACHE = null;
 
 async function fetchJsonAny(url) {
 	const res = await fetch(url)
@@ -78,14 +143,23 @@ async function tryWithAndWithoutFields(baseUrl, withFields) {
 }
 
 async function loadAllCountries() {
-	if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE
-	const r = await fetchJsonAny(ALL_COUNTRIES_URL)
-	if (r.ok && Array.isArray(r.data)) {
-		ALL_COUNTRIES_CACHE = r.data
-		return ALL_COUNTRIES_CACHE
-	}
-	ALL_COUNTRIES_CACHE = []
-	return ALL_COUNTRIES_CACHE
+  if (ALL_COUNTRIES_CACHE) return ALL_COUNTRIES_CACHE;
+
+  try {
+    const r1 = await fetchJsonAny(ALL_COUNTRIES_URL_FIELDS);
+    if (r1.ok && Array.isArray(r1.data)) {
+      ALL_COUNTRIES_CACHE = r1.data;
+      return ALL_COUNTRIES_CACHE;
+    }
+  } catch {}
+
+  const r2 = await fetchJsonAny(ALL_COUNTRIES_URL_FULL);
+  if (r2.ok && Array.isArray(r2.data)) {
+    ALL_COUNTRIES_CACHE = r2.data;
+    return ALL_COUNTRIES_CACHE;
+  }
+  ALL_COUNTRIES_CACHE = [];
+  return ALL_COUNTRIES_CACHE;
 }
 
 function localFuzzySuggestions(all, query, limit = 5) {
@@ -157,110 +231,81 @@ function searchByCapitalLocal(all, query, limit = 5) {
 		.map(x => x.ref)
 }
 
+//* SEARCH (with capital support) *//
 async function searchCountries(query) {
-	const q = encodeURIComponent(query.trim())
+  const qRaw = query.trim();
+  const q = encodeURIComponent(qRaw);
 
-	try {
-		const exact = await tryWithAndWithoutFields(`https://restcountries.com/v3.1/name/${q}?fullText=true`, true)
-		if (Array.isArray(exact) && exact.length) return { exact, suggestions: [] }
-	} catch {}
+  const code = qRaw.replace(/[^A-Za-z]/g, "").toUpperCase();
+  if (code.length === 2 || code.length === 3) {
+    try {
+      const byCode = await tryWithAndWithoutFields(
+        `https://restcountries.com/v3.1/alpha/${code}`,
+        true
+      );
+      if (Array.isArray(byCode) && byCode.length) {
+        return { exact: byCode, suggestions: [] };
+      }
+    } catch {}
+  }
 
-	try {
-		const partial = await tryWithAndWithoutFields(`https://restcountries.com/v3.1/name/${q}`, true)
-		if (Array.isArray(partial) && partial.length) return { exact: [], suggestions: partial }
-	} catch {}
+  try {
+    const exact = await tryWithAndWithoutFields(
+      `https://restcountries.com/v3.1/name/${q}?fullText=true`,
+      true
+    );
+    if (Array.isArray(exact) && exact.length) return { exact, suggestions: [] };
+  } catch {}
 
-	try {
-		const all = await loadAllCountries()
-		const byCapital = searchByCapitalLocal(all, query, 5)
-		if (byCapital.length) return { exact: [], suggestions: byCapital }
-		const sugg = localFuzzySuggestions(all, query, 5)
-		if (sugg.length) return { exact: [], suggestions: sugg }
-	} catch {}
+  try {
+    const partial = await tryWithAndWithoutFields(
+      `https://restcountries.com/v3.1/name/${q}`,
+      true
+    );
+    if (Array.isArray(partial) && partial.length) return { exact: [], suggestions: partial };
+  } catch {}
 
-	throw new Error('RESTCountriesSearchFailed')
-}
+  try {
+    const byCapital = await tryWithAndWithoutFields(
+      `https://restcountries.com/v3.1/capital/${q}`,
+      true
+    );
+    if (Array.isArray(byCapital) && byCapital.length) return { exact: [], suggestions: byCapital };
+  } catch {}
 
-async function fetchNeighborsByCca3(codes) {
-	if (!Array.isArray(codes) || codes.length === 0) return []
-	const list = codes.join(',')
-	try {
-		return await tryWithAndWithoutFields(`https://restcountries.com/v3.1/alpha?codes=${list}`, true)
-	} catch (_) {
-		return []
-	}
+  try {
+    const all = await loadAllCountries();
+    const byCapLocal = searchByCapitalLocal(all, qRaw, 5);
+    if (byCapLocal.length) return { exact: [], suggestions: byCapLocal };
+    const sugg = localFuzzySuggestions(all, qRaw, 5);
+    if (sugg.length) return { exact: [], suggestions: sugg };
+  } catch {}
+
+  throw new Error("RESTCountriesSearchFailed");
 }
 
 //* NEWS *//
 const NEWSAPI_SUPPORTED = new Set([
-	'ae',
-	'ar',
-	'at',
-	'au',
-	'be',
-	'bg',
-	'br',
-	'ca',
-	'ch',
-	'cn',
-	'co',
-	'cu',
-	'cz',
-	'de',
-	'eg',
-	'fr',
-	'gb',
-	'gr',
-	'hk',
-	'hu',
-	'id',
-	'ie',
-	'il',
-	'in',
-	'it',
-	'jp',
-	'kr',
-	'lt',
-	'lv',
-	'ma',
-	'mx',
-	'my',
-	'ng',
-	'nl',
-	'no',
-	'nz',
-	'ph',
-	'pl',
-	'pt',
-	'ro',
-	'rs',
-	'ru',
-	'sa',
-	'se',
-	'sg',
-	'si',
-	'sk',
-	'th',
-	'tr',
-	'tw',
-	'ua',
-	'us',
-	've',
-	'za',
-])
+  "ae","ar","at","au","be","bg","br","ca","ch","cn","co","cu","cz","de","eg","fr",
+  "gb","gr","hk","hu","id","ie","il","in","it","jp","kr","lt","lv","ma","mx","my",
+  "ng","nl","no","nz","ph","pl","pt","ro","rs","ru","sa","se","sg","si","sk","th",
+  "tr","tw","ua","us","ve","za"
+]);
 
-const get = async url => {
-	const res = await fetch(url, { method: 'GET' })
-	let data = null
-	try {
-		data = await res.json()
-	} catch {}
-	if (!res.ok || (data && data.status && data.status !== 'ok')) {
-		const msg = data?.message || `NewsAPI error (${res.status})`
-		return { error: msg, status: res.status }
-	}
-	return data
-}
+const newsDebug = (...args) => console.log("[NEWS]", ...args);
+
+const get = async (url) => {
+  newsDebug("Request →", url);
+  const res = await fetch(url, { method: "GET" });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  newsDebug("Response ←", res.status, data);
+  if (!res.ok || (data && data.status && data.status !== "ok")) {
+    const msg = data?.message || `NewsAPI error (${res.status})`;
+    return { error: msg, status: res.status, raw: data };
+  }
+  return data;
+};
 
 function isoDaysAgo(days) {
 	return new Date(Date.now() - days * 24 * 3600 * 1000).toISOString()
@@ -268,6 +313,16 @@ function isoDaysAgo(days) {
 function buildEverythingURL(params) {
 	const p = new URLSearchParams(params)
 	return `${PROXY_BASE}?path=everything&${p.toString()}`
+}
+
+async function newsHealthCheck() {
+  const u = `${PROXY_BASE}?path=top-headlines&country=gb&pageSize=1`;
+  const r = await get(u);
+  if (r.error) {
+    console.warn("News health check failed:", r);
+  } else {
+    console.info("News health check OK");
+  }
 }
 
 async function fetchNewsForCountry(country) {
@@ -466,6 +521,66 @@ function renderCountry(c) {
 	countryEl.appendChild(frag)
 	const borders = Array.isArray(c.borders) ? c.borders : []
 	renderBordersAsync(borders, c).catch(console.error)
+  countryEl.innerHTML = "";
+  const oldCities = document.getElementById("cities-panel");
+  if (oldCities) oldCities.remove();
+  if (!c) return;
+
+  const tpl = $("#tpl-country-card");
+  const frag = tpl.content.cloneNode(true);
+
+  const setText = (key, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.textContent = safeText(val);
+  };
+  const setAttr = (key, attr, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.setAttribute(attr, val);
+  };
+
+  const name = c.name?.common || c.name;
+  const official = c.name?.official || c.name;
+  const flag = c.flags?.svg || c.flags?.png || "";
+  const capital = Array.isArray(c.capital) ? (c.capital[0] || "—") : (c.capital || "—");
+  const area = c.area != null ? c.area.toLocaleString() + " km²" : "—";
+  const timezones = Array.isArray(c.timezones) ? c.timezones.join(", ") : (c.timezones || "—");
+  const tlds = Array.isArray(c.tld) ? c.tld.join(", ") : (c.tld || "—");
+  const calling = c.idd?.root ? `${c.idd.root}${(c.idd.suffixes || []).join(", ")}` :
+                    (c.idd?.suffixes || []).join(", ") || "—";
+  const languages = c.languages ? Object.values(c.languages).join(", ") : "—";
+  const currencies = c.currencies
+    ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ""})`).join(", ")
+    : "—";
+  const iso = `${safeText(c.cca2)} / ${safeText(c.cca3)}`;
+  const mapHref = c.maps?.googleMaps || c.maps?.openStreetMaps || "";
+
+  setText("name", name);
+  if (flag) { setAttr("flag", "src", flag); setAttr("flag", "alt", `Flag of ${name}`); }
+  else { const f = frag.querySelector('[data-field="flag"]'); if (f) f.remove(); }
+
+  setText("official", official);
+  setText("region", c.region);
+  setText("subregion", c.subregion);
+  setText("capital", capital);
+  setText("population", c.population?.toLocaleString?.());
+  setText("area", area);
+  setText("languages", languages);
+  setText("currencies", currencies);
+  setText("timezones", timezones);
+  setText("calling", calling);
+  setText("tlds", tlds);
+  setText("iso", iso);
+  if (mapHref) {
+    const a = frag.querySelector('[data-field="mapHref"]');
+    if (a) a.href = mapHref;
+  } else {
+    const m = frag.querySelector(".country-card__map");
+    if (m) m.remove();
+  }
+
+  countryEl.appendChild(frag);
+  const borders = Array.isArray(c.borders) ? c.borders : [];
+  renderBordersAsync(borders, c).catch(console.error);
 }
 
 //* RENDER: Cities *//
@@ -539,55 +654,119 @@ async function renderCitiesPanel(country, neighborsFull = []) {
 	}
 	const citiesPanelList = document.querySelector('#cities-panel-list')
 	citiesPanelList.appendChild(panel)
+  const old = document.getElementById("cities-panel");
+  if (old) old.remove();
+
+  const tpl = document.getElementById("tpl-cities-panel");
+  const frag = tpl.content.cloneNode(true);
+
+  const set = (key, val) => {
+    const el = frag.querySelector(`[data-field="${key}"]`);
+    if (el) el.textContent = val ?? "—";
+  };
+
+  const capName = Array.isArray(country?.capital) ? country.capital[0] : country?.capital;
+  const capCoords = country?.capitalInfo?.latlng || country?.latlng;
+  const tz = Array.isArray(country?.timezones) ? country.timezones[0] : country?.timezones;
+  const iana = pickCapitalIana(country);
+
+  const nowLocal = iana
+    ? formatLocalTimeIANA(iana) 
+    : (() => {
+        const mins = parseUtcOffset(tz);
+        if (mins == null) return "";
+        return formatLocalTimeFromUtcOffset(mins);
+      })();
+
+
+  set("city-capital-name", capName || "—");
+  set("city-capital-coords", capCoords ? `${capCoords[0].toFixed(2)}, ${capCoords[1].toFixed(2)}` : "—");
+  set("city-capital-localtime", nowLocal || "—");
+
+  const ul = frag.querySelector('[data-field="cities-nearby-list"]');
+  if (ul && neighborsFull.length && capCoords && Number.isFinite(capCoords[0]) && Number.isFinite(capCoords[1])) {
+    const nearby = neighborsFull
+      .map(n => {
+        const nCap = Array.isArray(n?.capital) ? n.capital[0] : n?.capital;
+        const nCoords = n?.capitalInfo?.latlng || n?.latlng;
+        const d = kmBetween(capCoords, nCoords);
+        return { name: n?.name?.common || n?.name || n?.cca3, cap: nCap, dist: d };
+      })
+      .filter(x => x.cap && Number.isFinite(x.dist))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 8);
+
+    if (nearby.length) {
+      nearby.forEach(x => {
+        const li = document.createElement("li");
+        li.textContent = `${x.cap} (${x.name}) – ${Math.round(x.dist)} km`;
+        ul.appendChild(li);
+      });
+    }
+  }
+
+  countryEl.appendChild(frag);
 }
 
 //* RENDER: News *//
 function renderNews(n) {
-	newsEl.innerHTML = ''
+  newsEl.innerHTML = "";
 
-	const wrapTpl = $('#tpl-news-block')
-	const itemTpl = $('#tpl-news-item')
-	const block = wrapTpl.content.cloneNode(true)
-	const list = block.querySelector('[data-field="list"]')
+  const wrapTpl = $("#tpl-news-block");
+  const itemTpl = $("#tpl-news-item");
+  if (!wrapTpl || !itemTpl) {
+    console.error("Missing news templates in HTML");
+    return;
+  }
 
-	const showMsg = msg => {
-		const li = document.createElement('li')
-		li.className = 'news-item'
-		li.textContent = msg
-		list.appendChild(li)
-		newsEl.appendChild(block)
-	}
+  const block = wrapTpl.content.cloneNode(true);
+  const list = block.querySelector('[data-field="list"]');
+  if (!list) {
+    console.error("Missing [data-field=list] in news template");
+    return;
+  }
 
-	if (!n || n.error) {
-		const msg = n?.status === 429 ? 'Rate limit hit. Try again shortly.' : n?.error || 'No news available.'
-		showMsg(msg)
-		return
-	}
+  const showMsg = (msg) => {
+    const li = document.createElement("li");
+    li.className = "news-item";
+    li.textContent = msg;
+    list.appendChild(li);
+    newsEl.appendChild(block);
+  };
 
-	const items = (n.articles || []).slice(0, 10)
-	if (items.length === 0) {
-		showMsg('No articles found.')
-		return
-	}
+  if (!n || n.error) {
+    const msg = n?.status === 429
+      ? "Rate limit hit. Try again shortly."
+      : (n?.error || "No news available.");
+    showMsg(msg);
+    return;
+  }
 
-	items.forEach(a => {
-		const row = itemTpl.content.cloneNode(true)
-		const link = row.querySelector('[data-field="url"]')
-		const title = row.querySelector('[data-field="title"]')
-		const source = row.querySelector('[data-field="source"]')
+  const items = (n.articles || []).slice(0, 10);
+  if (items.length === 0) {
+    showMsg("No articles found.");
+    return;
+  }
 
-		if (link) link.href = a.url
-		if (title) title.textContent = safeText(a.title)
-		if (source) {
-			const srcName = a.source?.name ? ` (${a.source.name}` : ''
-			const when = a.publishedAt ? ` - ${new Date(a.publishedAt).toLocaleString()}` : ''
-			source.textContent = srcName ? `${srcName}${when})` : when.replace(/^ - /, '')
-		}
+  items.forEach(a => {
+    const row = itemTpl.content.cloneNode(true);
+    const link = row.querySelector('[data-field="url"]');
+    const title = row.querySelector('[data-field="title"]');
+    const source = row.querySelector('[data-field="source"]');
+    const date   = row.querySelector('[data-field="date"]');
 
-		list.appendChild(row)
-	})
+    if (link) link.href = a.url || "#";
+    if (title) title.textContent = safeText(a.title);
 
-	newsEl.appendChild(block)
+    const srcName = a?.source?.name ? a.source.name : "";
+    const when = a?.publishedAt ? new Date(a.publishedAt).toLocaleString() : "";
+    if (source) source.textContent = srcName ? `(${srcName})` : "";
+    if (date)   date.textContent   = when || "";
+
+    list.appendChild(row);
+  });
+
+  newsEl.appendChild(block);
 }
 
 //* NEIGHBORS RENDER *//
@@ -722,9 +901,11 @@ async function handleSearch() {
 
 //* INIT *//
 function init() {
-	inputEl.addEventListener('keydown', e => {
-		if (e.key === 'Enter') handleSearch()
-	})
-	searchBtn.addEventListener('click', handleSearch)
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleSearch();
+  });
+  searchBtn.addEventListener("click", handleSearch);
+
+  newsHealthCheck().catch(() => {});
 }
 init()
