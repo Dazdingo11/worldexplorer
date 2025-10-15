@@ -679,10 +679,23 @@ async function handleNeighborClick(cca3) {
 		}
 	}
 }
+//* BANNER RESIZE AFTER FIRST SEARCH *//
+const resizeBanner = () => {
+	const banner = document.querySelector('.banner')
+	const appTitle = document.querySelector('.app-title')
+	const appSubTitle = document.querySelector('.app-subtitle')
+	appTitle.style.fontSize = '2vw'
+	appSubTitle.style.fontSize = '1vw'
+	appTitle.style.color = '#ffffff'
+	appSubTitle.style.color = '#ffffff'
+	banner.style.height = '30vh'
+	banner.style.backgroundPosition = 'bottom'
+}
 
 //* SEARCH FLOW *//
 let searchBusy = false
 async function handleSearch() {
+	resizeBanner()
 	if (searchBusy) return
 	searchBusy = true
 

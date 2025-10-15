@@ -19,46 +19,63 @@
 		/>
 		<link
 			rel="stylesheet"
+			href="./assets/css/banner.css"
+		/>
+		<link
+			rel="stylesheet"
 			href="style.css"
 		/>
 	</head>
 	<body>
 		<main class="app">
-			<h1 class="app-title">World Explorer</h1>
-
 			<section
 				id="search-section"
 				class="search-section"
 			>
-				<label
-					for="country-input"
-					class="sr-only"
-					>Country</label
-				>
-				<input
-					id="country-input"
-					class="search-input"
-					type="text"
-					value="brazil"
-					placeholder="Type a country (e.g., Japan)"
-				/>
-				<button
-					id="search-button"
-					class="search-button"
-				>
-					Search
-				</button>
+				<div class="banner d-flex flex-nowrap flex-column text-center">
+					<div class="landing-headings mt-5 fw-bolder">
+						<h1 class="landing-heading1 app-title">WORLD EXPLORER</h1>
+						<h2 class="landing-heading2 app-subtitle">DISCOVER THE WORLD</h2>
+					</div>
+					<div>
+						<div
+							class="d-flex mt-5 justify-content-center w-100"
+							role="search"
+						>
+							<label
+								for="country-input"
+								class="sr-only d-none"
+								>Country</label
+							>
+							<input
+								id="country-input"
+								class="search-input w-50 rounded-pill px-4 py-1 me-2"
+								type="search"
+								value="brazil"
+								placeholder="Type a country (e.g., Japan)"
+								aria-label="Search"
+							/>
 
-				<div
-					id="suggestions-box"
-					class="suggestions-box"
-					aria-live="polite"
-				></div>
-				<div
-					id="error-box"
-					class="error-box"
-					role="alert"
-				></div>
+							<button
+								id="search-button"
+								class="search-button btn btn-primary rounded-pill"
+							>
+								Search
+							</button>
+
+							<div
+								id="suggestions-box"
+								class="suggestions-box"
+								aria-live="polite"
+							></div>
+							<div
+								id="error-box"
+								class="error-box"
+								role="alert"
+							></div>
+						</div>
+					</div>
+				</div>
 			</section>
 			<section class="country-panel-wrapper bg-light py-5">
 				<div class="container">
