@@ -57,7 +57,6 @@
 									id="country-input"
 									class="search-input rounded-pill w-100 border-0 px-3 bg-light fs-5 fw-bold text-secondary"
 									type="search"
-									value="Mexico"
 									placeholder="Type a country (e.g., Japan)"
 									aria-label="Search"
 								/>
@@ -71,7 +70,6 @@
 						</div>
 					</div>
 				</section>
-
 				<!-- Countries -->
 				<section class="country-panel-wrapper">
 					<div class="container">
@@ -86,6 +84,12 @@
 							class="error-box"
 							role="alert"
 						></div>
+					</div>
+					<div class="container">
+						<section
+							id="country-summary"
+							class="country-summary"
+						></section>
 					</div>
 					<div class="container">
 						<section
@@ -176,6 +180,9 @@
 					</div>
 				</div>
 			</section>
+		</template>
+		<template id="tlp-country-summary">
+			<div class="summary fs-5 mb-5"></div>
 		</template>
 
 		<!-- Border button -->

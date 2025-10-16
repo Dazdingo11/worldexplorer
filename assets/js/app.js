@@ -9,6 +9,30 @@ const suggestionsEl = $("#suggestions-box");
 const errorsEl = $("#error-box");
 const countryEl = $("#country-panel");
 const newsEl = $("#news-panel");
+const countrySummary = document.querySelector("#country-summary");
+
+//** Render Country Summary **//
+const renderCountrySummary = async (country) => {
+	const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${country}`;
+	try {
+		const response = await fetch(url);
+		if (response.ok) {
+			const data = await response.json();
+			countrySummary.innerHTML = "";
+
+			const summaryTpl = document.querySelector("#tlp-country-summary");
+			const frag = summaryTpl.content.cloneNode(true);
+			const summary = frag.querySelector(".summary");
+			summary.innerHTML = "";
+
+			summary.innerHTML = data.extract_html;
+			// console.log(summary);
+			countrySummary.append(frag);
+		}
+	} catch (error) {
+		console.log(error);
+	}
+};
 
 //* UTIL *//
 const normalize = (s) =>
@@ -707,9 +731,12 @@ async function showCountry(country, updateInput = true) {
 		const n = country?.name?.common || country?.name || "";
 		if (n) inputEl.value = n;
 	}
+
 	renderCountry(country);
+	renderCountrySummary(country?.name?.common);
 	try {
 		const key = country?.cca3 || country?.cca2 || country?.name?.common || "";
+
 		if (key && countryCache.has(key)) {
 			renderNews(countryCache.get(key));
 		} else {
