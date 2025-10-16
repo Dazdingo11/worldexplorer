@@ -10,3 +10,9 @@ body {
 .borders-list button {
 	width: fit-content;
 }
+
+.app-wrapper {
+	display: grid;
+	min-height: 100vh;
+	grid-template-rows: 1fr auto;
+}

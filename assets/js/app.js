@@ -333,6 +333,7 @@ async function fetchNewsForCountry(country) {
 //* RENDER: Suggestions *//
 function renderSuggestions(listFromApi, originalQuery) {
 	suggestionsEl.innerHTML = ''
+	suggestionsEl.classList.remove(...['mt-3', 'alert', 'alert-info'])
 	if (!Array.isArray(listFromApi) || listFromApi.length === 0) return
 
 	const q = normalize(originalQuery)
@@ -395,6 +396,7 @@ function renderSuggestions(listFromApi, originalQuery) {
 		})
 		box.appendChild(btn)
 	})
+	suggestionsEl.classList.add(...['mt-3', 'alert', 'alert-info'])
 	suggestionsEl.appendChild(box)
 }
 
@@ -661,6 +663,7 @@ async function showCountry(country, updateInput = true) {
 }
 
 async function handleNeighborClick(cca3) {
+	errorsEl.classList.add(...['mt-3'])
 	const prevErr = errorsEl.textContent
 	errorsEl.textContent = 'Loading neighbor…'
 	try {
@@ -717,12 +720,14 @@ async function handleSearch() {
 	suggestionsEl.innerHTML = ''
 	countryEl.innerHTML = ''
 	newsEl.innerHTML = ''
+	errorsEl.classList.remove(...['mt-3', 'alert', 'alert-danger'])
 
 	const oldCities = document.getElementById('cities-panel')
 	if (oldCities) oldCities.remove()
 
 	const query = inputEl.value.trim()
 	if (!query) {
+		errorsEl.classList.add(...['mt-3', 'alert', 'alert-danger'])
 		errorsEl.textContent = 'Please type a country name.'
 		searchBusy = false
 		return
@@ -741,6 +746,7 @@ async function handleSearch() {
 		}
 	} catch (e) {
 		console.error(e)
+		errorsEl.classList.add(...['mt-3', 'alert', 'alert-danger'])
 		errorsEl.textContent = 'Country lookup failed. Try again.'
 	} finally {
 		searchBusy = false
@@ -750,6 +756,7 @@ async function handleSearch() {
 //* Footer *//
 const renderFooter = () => {
 	const footer = document.querySelector('footer')
+	footer.innerHTML = ''
 	footer.classList.add(...['bg-dark', 'text-light', 'py-3'])
 	const footerTpl = document.getElementById('footer-tpl')
 	const frag = footerTpl.content.cloneNode(true)
