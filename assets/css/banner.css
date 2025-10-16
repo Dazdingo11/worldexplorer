@@ -1,5 +1,5 @@
 .banner {
-	background-image: radial-gradient(#00000099, #00000099), url('./../images/pexels-maximilian-ruther-199439233-11546831.webp');
+	background-image: radial-gradient(#00000099, #00000099), url("./../images/pexels-maximilian-ruther-199439233-11546831.webp");
 	background-size: cover;
 	background-repeat: no-repeat;
 	height: 100vh;
@@ -29,4 +29,8 @@
 }
 .search-input {
 	outline: none;
+}
+
+#country-input::before {
+	content: "🔍";
 }
