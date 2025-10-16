@@ -1,5 +1,5 @@
-//* Netlify *//
-const PROXY_BASE = "https://worldexplorer2025.netlify.app/api/news";
+//* Cloudflare *//
+const PROXY_BASE = "/news";
 
 //* DOM HOOKS *//
 const $ = (sel) => document.querySelector(sel);
