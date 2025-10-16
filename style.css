@@ -1,23 +1,45 @@
 body {
-	font-family: system-ui, sans-serif;
+  font-family: Alegreya Serif, serif;
+  background-color: #607d8b99;
+  /* background-color: #2e3d4a;#607d8b */
 }
 #errors {
-	color: #c00;
-	margin-top: 8px;
+  color: #c00;
+  margin-top: 8px;
 }
 #suggestions button {
-	margin-right: 8px;
-	margin-top: 8px;
+  margin-right: 8px;
+  margin-top: 8px;
 }
-/* section {
-	margin-top: 16px;
-} */
-
 .borders-list {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .borders-list button {
-	width: fit-content;
+  width: fit-content;
+}
+
+/* .country-panel-wrapper {
+  background-color: #90a5b2cc;
+} */
+
+.country-card__flag {
+  width: 90%;
+}
+
+.list-group-item {
+  border: none;
+}
+
+.card-color {
+  background-color: #6c828d;
+}
+.box-shadow {
+  box-shadow: 25px 25px 35px -5px black;
+  border: solid 1px black;
+}
+
+.neighbor-country-btn button {
+  border-radius: 3px !important;
 }

@@ -1,10 +1,9 @@
 .banner {
-  background-image: url("./../images/banner.webp");
+  background-image: url("./../images/pexels-maximilian-ruther-199439233-11546831.jpg");
   background-size: cover;
   background-repeat: no-repeat;
   width: 100vw;
   height: 100vh;
-  transition: height 1s ease;
 }
 
 .landing-headings {
@@ -12,13 +11,11 @@
 }
 
 .landing-heading1 {
-  font-size: max(30px, 7vw);
+  font-size: 7vw;
   color: black;
-  transition: all 1s ease;
 }
 
 .landing-heading2 {
-  font-size: max(16px, 3vw);
+  font-size: 3vw;
   color: black;
-  transition: all 1s ease;
 }
