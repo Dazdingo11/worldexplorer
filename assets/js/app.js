@@ -24,9 +24,7 @@ const renderCountrySummary = async (country) => {
 			const frag = summaryTpl.content.cloneNode(true);
 			const summary = frag.querySelector(".summary");
 			summary.innerHTML = "";
-
 			summary.innerHTML = data.extract_html;
-			// console.log(summary);
 			countrySummary.append(frag);
 		}
 	} catch (error) {
@@ -723,8 +721,6 @@ async function renderBordersAsync(borders, currentCountry = null) {
 				btn.style.borderColor = "black";
 				btn.style.transform = "none";
 			});
-			//   btn.classList.add("btn-outline-secondary");
-			//   btn.setAttribute("border-color", "black");
 			btn.style.borderColor = "black";
 			btn.style.color = "black";
 			btn.style.fontSize = "17px";
