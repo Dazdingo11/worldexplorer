@@ -1,5 +1,5 @@
 //* Cloudflare *//
-const PROXY_BASE = "/news";
+const PROXY_BASE = "https://worldexplorer.arkadain1994.workers.dev";
 
 //* DOM HOOKS *//
 const $ = (sel) => document.querySelector(sel);
