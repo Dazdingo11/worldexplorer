@@ -23,78 +23,89 @@
 		/>
 		<link
 			rel="stylesheet"
-			href="style.css"
+			href="./assets/css/style.css"
 		/>
+		<script
+			type="module"
+			src="./assets/js/app.js"
+			defer
+		></script>
 	</head>
 	<body>
-		<main class="app">
-			<section
-				id="search-section"
-				class="search-section"
-			>
-				<div class="banner d-flex flex-nowrap flex-column text-center">
-					<div class="landing-headings mt-5 fw-bolder">
-						<h1 class="landing-heading1 app-title">WORLD EXPLORER</h1>
-						<h2 class="landing-heading2 app-subtitle">DISCOVER THE WORLD</h2>
-					</div>
-					<div>
+		<div class="app-wrapper">
+			<main class="app">
+				<section
+					id="search-section"
+					class="search-section banner d-flex justify-content-center py-5"
+				>
+					<div
+						class="container banner-content"
+						id="banner-content"
+					>
+						<div class="landing-headings fw-bolder mb-3">
+							<h1 class="landing-heading1 app-title text-center text-nowrap">WORLD EXPLORER</h1>
+							<h2 class="landing-heading2 app-subtitle text-center">DISCOVER THE WORLD</h2>
+						</div>
+
 						<div
-							class="d-flex mt-5 justify-content-center w-100"
+							class="d-flex justify-content-center w-100"
 							role="search"
 						>
-							<label
-								for="country-input"
-								class="sr-only d-none"
-								>Country</label
-							>
-							<input
-								id="country-input"
-								class="search-input w-50 rounded-pill px-4 py-1 me-2"
-								type="search"
-								value="brazil"
-								placeholder="Type a country (e.g., Japan)"
-								aria-label="Search"
-							/>
-
-							<button
-								id="search-button"
-								class="search-button btn btn-primary rounded-pill"
-							>
-								Search
-							</button>
-
-							<div
-								id="suggestions-box"
-								class="suggestions-box"
-								aria-live="polite"
-							></div>
-							<div
-								id="error-box"
-								class="error-box"
-								role="alert"
-							></div>
+							<div class="d-flex align-items-center rounded-pill bg-light w-75 p-1">
+								<input
+									id="country-input"
+									class="search-input rounded-pill w-100 border-0 px-3 bg-light"
+									type="search"
+									value="Mexico"
+									placeholder="Type a country (e.g., Japan)"
+									aria-label="Search"
+								/>
+								<button
+									id="search-button"
+									class="search-button btn btn-primary rounded-pill"
+								>
+									Search
+								</button>
+							</div>
 						</div>
 					</div>
-				</div>
-			</section>
-			<section class="country-panel-wrapper bg-light py-5">
-				<div class="container">
-					<section
-						id="country-panel"
-						class="country-panel"
-					></section>
-				</div>
-			</section>
-			<section class="news-panel-wrapper bg-gradient py-5">
-				<div class="container">
-					<section
-						id="news-panel"
-						class="news-panel"
-					></section>
-				</div>
-			</section>
-		</main>
+				</section>
 
+				<!-- Countries -->
+				<section class="country-panel-wrapper">
+					<div class="container">
+						<div
+							id="suggestions-box"
+							class="suggestions-box"
+							role="alert"
+							aria-live="polite"
+						></div>
+						<div
+							id="error-box"
+							class="error-box"
+							role="alert"
+						></div>
+					</div>
+					<div class="container">
+						<section
+							id="country-panel"
+							class="country-panel"
+						></section>
+					</div>
+				</section>
+
+				<!-- News -->
+				<section class="news-panel-wrapper">
+					<div class="container">
+						<section
+							id="news-panel"
+							class="news-panel"
+						></section>
+					</div>
+				</section>
+			</main>
+			<footer></footer>
+		</div>
 		<!-- Country card -->
 		<template id="tpl-country-card">
 			<section class="country-card">
@@ -128,7 +139,7 @@
 				</div>
 			</section>
 
-			<section class="bg-white">
+			<section class="bg-light rounded-3">
 				<div class="row m-0 mt-5 border border-1 rounded-3 p-3">
 					<div class="col-12 col-md-6">
 						<h2
@@ -208,10 +219,8 @@
 				></small>
 			</li>
 		</template>
-
-		<script
-			type="module"
-			src="app.js"
-		></script>
+		<template id="footer-tpl">
+			<div class="container"><p class="text-center text-light">&copy; Copyright 2025</p></div>
+		</template>
 	</body>
 </html>
