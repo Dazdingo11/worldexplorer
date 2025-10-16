@@ -2,6 +2,7 @@ body {
 	font-family: Alegreya, system-ui, sans-serif;
 	min-width: 360px;
 	color: #20252a;
+	background-color: #607d8b99;
 }
 .borders-list {
 	display: flex;
@@ -23,13 +24,21 @@ body {
 }
 
 .card-color {
-	background-color: #6c828d;
+	background-color: #6c828d !important;
 }
 .box-shadow {
 	box-shadow: 25px 25px 35px -5px black;
-	border: solid 1px black;
+	border: solid 1px black !important;
 }
 
 .neighbor-country-btn button {
 	border-radius: 3px !important;
+}
+
+.list-group {
+	background-color: #6c828d !important;
+}
+.list-group-item {
+	background: transparent;
+	border: none !important;
 }

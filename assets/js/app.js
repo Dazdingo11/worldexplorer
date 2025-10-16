@@ -707,6 +707,28 @@ async function renderBordersAsync(borders, currentCountry = null) {
 			const code = n?.cca3 || "";
 			btn.classList.add("btn");
 			btn.classList.add("btn-outline-secondary");
+
+			btn.style.backgroundColor = "#5a717d";
+			btn.addEventListener("mouseover", () => {
+				btn.style.backgroundColor = "rgb(39 51 58)"; // blue background
+				btn.style.transform = "scale(1.1)";
+				btn.style.color = "white"; // white text
+				btn.style.borderColor = "black";
+			});
+
+			btn.addEventListener("mouseout", () => {
+				btn.style.backgroundColor = "#5a717d";
+				btn.style.boxshadow = "7px 7px 0 0 black";
+				btn.style.color = "black";
+				btn.style.borderColor = "black";
+				btn.style.transform = "none";
+			});
+			//   btn.classList.add("btn-outline-secondary");
+			//   btn.setAttribute("border-color", "black");
+			btn.style.borderColor = "black";
+			btn.style.color = "black";
+			btn.style.fontSize = "17px";
+
 			btn.textContent = name;
 			btn.dataset.cca3 = code;
 			btn.addEventListener("click", async () => {
