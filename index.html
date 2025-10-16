@@ -1,256 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<title>World Explorer</title>
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1"
-		/>
-		<link
-			rel="preconnect"
-			href="https://fonts.googleapis.com"
-		/>
-		<link
-			rel="preconnect"
-			href="https://fonts.gstatic.com"
-			crossorigin
-		/>
-		<link
-			rel="preconnect"
-			href="https://fonts.googleapis.com"
-		/>
-		<link
-			rel="preconnect"
-			href="https://fonts.gstatic.com"
-			crossorigin
-		/>
-		<link
-			href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap"
-			rel="stylesheet"
-		/>
-		<link
-			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-			rel="stylesheet"
-			integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
-			crossorigin="anonymous"
-		/>
-		<link
-			rel="stylesheet"
-			href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
-		/>
-		<link
-			rel="stylesheet"
-			href="./assets/css/banner.css"
-		/>
-		<link
-			rel="stylesheet"
-			href="./assets/css/style.css"
-		/>
-		<script
-			type="module"
-			src="./assets/js/app.js"
-			defer
-		></script>
-	</head>
-	<body>
-		<div class="app-wrapper">
-			<main class="app">
-				<section
-					id="search-section"
-					class="search-section banner d-flex justify-content-center py-5"
-				>
-					<div
-						class="container banner-content"
-						id="banner-content"
-					>
-						<div class="landing-headings fw-bolder mb-3">
-							<h1 class="landing-heading1 app-title text-center text-nowrap">WORLD EXPLORER</h1>
-							<h2 class="landing-heading2 app-subtitle text-center">DISCOVER THE WORLD</h2>
-						</div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>World Explorer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="./assets/css/banner.css" />
+    <link rel="stylesheet" href="./assets/css/style.css" />
+    <script type="module" src="./assets/js/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-wrapper">
+      <main class="app">
+        <section
+          id="search-section"
+          class="search-section banner d-flex justify-content-center py-5"
+        >
+          <div class="container banner-content" id="banner-content">
+            <div class="landing-headings fw-bolder mb-5">
+              <h1
+                class="app-title fw-bold text-center text-nowrap"
+                id="landing-heading1"
+              >
+                WORLD EXPLORER
+              </h1>
+              <h2
+                class="app-subtitle fw-bold text-center"
+                id="landing-heading2"
+              >
+                DISCOVER THE WORLD
+              </h2>
+            </div>
 
-						<div
-							class="d-flex justify-content-center w-100"
-							role="search"
-						>
-							<div class="d-flex align-items-center rounded-pill bg-light w-75 p-1">
-								<i class="bi bi-search ms-2 fs-5"></i>
-								<input
-									id="country-input"
-									class="search-input rounded-pill w-100 border-0 px-3 bg-light fs-5 fw-bold text-secondary"
-									type="search"
-									placeholder="Type a country (e.g., Japan)"
-									aria-label="Search"
-								/>
-								<button
-									id="search-button"
-									class="search-button btn btn-primary rounded-pill"
-								>
-									Search
-								</button>
-							</div>
-						</div>
-					</div>
-				</section>
-				<!-- Countries -->
-				<section class="country-panel-wrapper">
-					<div class="container">
-						<div
-							id="suggestions-box"
-							class="suggestions-box"
-							role="alert"
-							aria-live="polite"
-						></div>
-						<div
-							id="error-box"
-							class="error-box"
-							role="alert"
-						></div>
-					</div>
-					<div class="container">
-						<section
-							id="country-summary"
-							class="country-summary"
-						></section>
-					</div>
-					<div class="container">
-						<section
-							id="country-panel"
-							class="country-panel"
-						></section>
-					</div>
-				</section>
+            <div class="d-flex justify-content-center w-100" role="search">
+              <div
+                class="d-flex align-items-center rounded-pill bg-light w-75 p-1"
+              >
+                <i class="bi bi-search ms-2 fs-5"></i>
+                <input
+                  id="country-input"
+                  class="search-input rounded-pill w-100 border-0 px-3 bg-light fs-5 fw-bold text-secondary"
+                  type="search"
+                  placeholder="Type a country (e.g., Japan)"
+                  aria-label="Search"
+                />
+                <button
+                  id="search-button"
+                  class="search-button btn btn-primary rounded-pill"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- Countries -->
+        <section class="country-panel-wrapper">
+          <div class="container">
+            <div
+              id="suggestions-box"
+              class="suggestions-box"
+              role="alert"
+              aria-live="polite"
+            ></div>
+            <div id="error-box" class="error-box" role="alert"></div>
+          </div>
+          <div class="container">
+            <section id="country-summary" class="country-summary"></section>
+          </div>
+          <div class="container">
+            <section id="country-panel" class="country-panel"></section>
+          </div>
+        </section>
 
-				<!-- News -->
-				<section class="news-panel-wrapper">
-					<div class="container">
-						<section
-							id="news-panel"
-							class="news-panel"
-						></section>
-					</div>
-				</section>
-			</main>
-			<footer></footer>
-		</div>
-		<!-- Country card -->
-		<template id="tpl-country-card">
-			<section class="country-card">
-				<div class="row border-1 border-bottom pb-5">
-					<div class="col-12 col-lg-7 mb-5 mb-lg-0">
-						<header class="country-card__header">
-							<img
-								class="country-card__flag img-fluid border border-1 rounded-2 box-shadow"
-								data-field="flag"
-								alt=""
-							/>
-						</header>
-					</div>
-					<div class="col-12 col-lg-5">
-						<ul class="country-card__grid fs-5 list-group box-shadow border-dark card-color">
-							<li class="list-group-item"><i class="bi bi-chat-right-fill"></i> Official: <span data-field="official"></span></li>
-							<li class="list-group-item">
-								<i class="bi bi-pin-map-fill"></i> Region: <span data-field="region"></span> / <span data-field="subregion"></span>
-							</li>
-							<li class="list-group-item"><i class="bi bi-geo-alt-fill"></i> Capital: <span data-field="capital"></span></li>
-							<li class="list-group-item"><i class="bi bi-people-fill"></i> Population: <span data-field="population"></span></li>
-							<li class="list-group-item"><i class="bi bi-radar"></i> Area: <span data-field="area"></span></li>
-							<li class="list-group-item"><i class="bi bi-chat-fill"></i> Languages: <span data-field="languages"></span></li>
-							<li class="list-group-item"><i class="bi bi-currency-exchange"></i> Currencies: <span data-field="currencies"></span></li>
-							<li class="list-group-item"><i class="bi bi-clock"></i> Timezones: <span data-field="timezones"></span></li>
-							<li class="list-group-item"><i class="bi bi-phone-fill"></i> Calling Code:<span data-field="calling"></span></li>
-							<li class="list-group-item"><i class="bi bi-ethernet"></i> TLDs:<span data-field="tlds"></span></li>
-							<li class="list-group-item"><i class="bi bi-asterisk"></i> ISO:<span data-field="iso"></span></li>
-						</ul>
-					</div>
-				</div>
-			</section>
+        <!-- News -->
+        <section class="news-panel-wrapper">
+          <div class="container">
+            <section id="news-panel" class="news-panel"></section>
+          </div>
+        </section>
+      </main>
+      <footer></footer>
+    </div>
+    <!-- Country card -->
+    <template id="tpl-country-card">
+      <section class="country-card">
+        <div class="row pb-5">
+          <div class="col-12 col-lg-7 mb-5 mb-lg-0">
+            <header class="country-card__header">
+              <img
+                class="country-card__flag img-fluid rounded-2 box-shadow"
+                data-field="flag"
+                alt=""
+              />
+            </header>
+          </div>
+          <div class="col-12 col-lg-5">
+            <ul
+              class="country-card__grid fs-5 p-4 list-group box-shadow border-dark card-color"
+            >
+              <li class="list-group-item">
+                <i class="bi bi-chat-right-fill"></i> Official:
+                <span data-field="official"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-pin-map-fill"></i> Region:
+                <span data-field="region"></span> /
+                <span data-field="subregion"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-geo-alt-fill"></i> Capital:
+                <span data-field="capital"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-people-fill"></i> Population:
+                <span data-field="population"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-radar"></i> Area:
+                <span data-field="area"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-chat-fill"></i> Languages:
+                <span data-field="languages"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-currency-exchange"></i> Currencies:
+                <span data-field="currencies"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-clock"></i> Timezones:
+                <span data-field="timezones"></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-phone-fill"></i> Calling Code:<span
+                  data-field="calling"
+                ></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-ethernet"></i> TLDs:<span
+                  data-field="tlds"
+                ></span>
+              </li>
+              <li class="list-group-item">
+                <i class="bi bi-asterisk"></i> ISO:<span
+                  data-field="iso"
+                ></span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-			<section class="bg-light rounded-3 border-dark">
-				<div class="row m-0 mt-5 border border-1 rounded-3 p-3 box-shadow card-color">
-					<div class="col-12 col-md-6">
-						<h2
-							class="country-card__title fs-1 tracking-wide"
-							data-field="name"
-						></h2>
-						<div class="country-card__map">
-							<a
-								target="_blank"
-								rel="noopener noreferrer"
-								data-field="mapHref"
-								class="text-decoration-none fs-3"
-								><i class="bi bi-map-fill"></i> View on map</a
-							>
-						</div>
-						<div
-							id="cities-panel-list"
-							class="mt-5"
-						></div>
-					</div>
-					<div class="col-12 col-md-6 mt-5 mt-md-0">
-						<div class="country-card__borders">
-							<h3 class="mb-3">Bordering Countries:</h3>
-							<div
-								class="borders-list"
-								data-field="bordersMount"
-							></div>
-						</div>
-						<div
-							id="nearby-list"
-							class="mt-5"
-						></div>
-					</div>
-				</div>
-			</section>
-		</template>
-		<template id="tlp-country-summary">
-			<div class="summary fs-5 mb-5"></div>
-		</template>
+      <section class="rounded-3 border-dark">
+        <div class="row m-0 mt-5 rounded-3 p-3 box-shadow card-color">
+          <div class="col-12 col-md-6">
+            <h2
+              class="country-card__title fs-1 tracking-wide"
+              data-field="name"
+            ></h2>
+            <div class="country-card__map">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                data-field="mapHref"
+                class="text-decoration-none fs-3"
+                ><i class="bi bi-map-fill"></i> View on map</a
+              >
+            </div>
+            <div id="cities-panel-list" class="mt-5"></div>
+          </div>
+          <div class="col-12 col-md-6 mt-5 mt-md-0">
+            <div class="country-card__borders">
+              <h3 class="mb-3">Bordering Countries:</h3>
+              <div class="borders-list" data-field="bordersMount"></div>
+            </div>
+            <div id="nearby-list" class="mt-5"></div>
+          </div>
+        </div>
+      </section>
+    </template>
+    <template id="tlp-country-summary">
+      <div class="summary card-color box-shadow rounded-3 p-4 fs-5 mb-5"></div>
+    </template>
 
-		<!-- Border button -->
-		<template id="tpl-border-button">
-			<button
-				type="button"
-				class="neighbor-button"
-				data-cca3=""
-			></button>
-		</template>
+    <!-- Border button -->
+    <template id="tpl-border-button">
+      <button type="button" class="neighbor-button" data-cca3=""></button>
+    </template>
 
-		<!-- News block -->
-		<template id="tpl-news-block">
-			<article class="news-block box-shadow p-3 rounded-3 card-color">
-				<h3 class="news-block__title">Top News</h3>
-				<ul
-					class="news-list"
-					data-field="list"
-				></ul>
-			</article>
-		</template>
+    <!-- News block -->
+    <template id="tpl-news-block">
+      <article class="news-block box-shadow p-3 rounded-3 card-color">
+        <h3 class="news-block__title">Top News</h3>
+        <ul class="news-list" data-field="list"></ul>
+      </article>
+    </template>
 
-		<!-- Single news item -->
-		<template id="tpl-news-item">
-			<li class="news-item">
-				<a
-					class="news-item__link"
-					target="_blank"
-					rel="noopener noreferrer"
-					data-field="url"
-				>
-					<span data-field="title"></span>
-				</a>
-				<small
-					class="news-item__source"
-					data-field="source"
-				></small>
+    <!-- Single news item -->
+    <template id="tpl-news-item">
+      <li class="news-item">
+        <a
+          class="news-item__link"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-field="url"
+        >
+          <span data-field="title"></span>
+        </a>
+        <small class="news-item__source" data-field="source"></small>
 
-				<small
-					class="news-item__date"
-					data-field="date"
-				></small>
-			</li>
-		</template>
-		<template id="footer-tpl">
-			<div class="container"><p class="text-center text-light">&copy; Copyright 2025</p></div>
-		</template>
-	</body>
+        <small class="news-item__date" data-field="date"></small>
+      </li>
+    </template>
+    <template id="footer-tpl">
+      <div class="container">
+        <p class="text-center fs-5 text-light">&copy; Copyright 2025</p>
+      </div>
+    </template>
+  </body>
 </html>
