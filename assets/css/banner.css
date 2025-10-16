@@ -1,13 +1,9 @@
 .banner {
-	background-image: radial-gradient(#00000099, #00000099), url("./../images/pexels-maximilian-ruther-199439233-11546831.webp");
+	background-image: radial-gradient(#00000099, #00000099), url("./../images/banner.webp");
 	background-size: cover;
 	background-repeat: no-repeat;
 	height: 100vh;
 	transition: height 1s ease;
-}
-
-.landing-headings {
-	font-family: Alegreya Serif, serif;
 }
 
 .landing-heading1 {
@@ -29,8 +25,4 @@
 }
 .search-input {
 	outline: none;
-}
-
-#country-input::before {
-	content: "🔍";
 }
